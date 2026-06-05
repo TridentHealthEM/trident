@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trident Health EM Provider Reference Database</title>
+<script>
+(function() {
+  var pwd = sessionStorage.getItem('trident_em_auth');
+  if (pwd !== 'TridentEM') {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.style.display = 'none';
+      var overlay = document.createElement('div');
+      overlay.id = 'auth-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:#001f5b;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+      overlay.innerHTML = [
+        '<div style="background:white;border-radius:16px;padding:40px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">',
+        '<div style="font-size:36px;margin-bottom:12px;">🏥</div>',
+        '<div style="font-size:22px;font-weight:700;color:#003087;margin-bottom:6px;">Trident EM Reference</div>',
+        '<div style="font-size:13px;color:#5a6480;margin-bottom:24px;">HCA Trident Health System · For authorized providers only</div>',
+        '<input id="auth-input" type="password" placeholder="Enter password" style="width:100%;padding:12px 16px;border:2px solid #dde2ec;border-radius:8px;font-size:15px;outline:none;box-sizing:border-box;margin-bottom:10px;" />',
+        '<div id="auth-error" style="color:#e8212a;font-size:13px;min-height:18px;margin-bottom:10px;"></div>',
+        '<button id="auth-btn" style="width:100%;background:#003087;color:white;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;">Access Database</button>',
+        '</div>'
+      ].join('');
+      document.body.parentNode.insertBefore(overlay, document.body);
+      document.getElementById('auth-input').focus();
+      function tryLogin() {
+        var val = document.getElementById('auth-input').value;
+        if (val === 'TridentEM') {
+          sessionStorage.setItem('trident_em_auth', 'TridentEM');
+          overlay.remove();
+          document.body.style.display = '';
+        } else {
+          document.getElementById('auth-error').textContent = 'Incorrect password. Please try again.';
+          document.getElementById('auth-input').value = '';
+          document.getElementById('auth-input').focus();
+        }
+      }
+      document.getElementById('auth-btn').addEventListener('click', tryLogin);
+      document.getElementById('auth-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') tryLogin();
+        document.getElementById('auth-error').textContent = '';
+      });
+    });
+  }
+})();
+</script>
+<style>
+  :root {
+    --primary: #003087;
+    --accent: #e8212a;
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --border: #dde2ec;
+    --text: #1a2236;
+    --muted: #5a6480;
+    --tag-bg: #e8edf8;
+    --tag-text: #003087;
+    --highlight: #fff3cd;
+    --success: #1a7a4a;
+    --warning: #b45309;
+    --danger: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  header { background: var(--primary); color: white; padding: 18px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .subtitle { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .badge { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; }
+
+  /* Search */
+  .search-bar { background: white; border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .search-input-wrap { flex: 1; min-width: 240px; position: relative; }
+  .search-input-wrap input { width: 100%; padding: 10px 16px 10px 40px; border: 2px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+  .search-input-wrap input:focus { border-color: var(--primary); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; }
+  .clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; display: none; }
+  .result-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  /* Filters */
+  .filters { background: white; border-bottom: 2px solid var(--border); padding: 10px 24px; display: flex; gap: 8px; flex-wrap: wrap; overflow-x: auto; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .filter-btn.all.active { background: var(--accent); border-color: var(--accent); }
+
+  /* Main layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 20px 40px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: box-shadow 0.2s; }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,48,135,0.12); }
+  .card-header { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; cursor: pointer; }
+  .card-icon { font-size: 22px; min-width: 36px; text-align: center; margin-top: 1px; }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--primary); flex: 1; }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { background: var(--tag-bg); color: var(--tag-text); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .tag.urgent { background: #fef2f2; color: var(--danger); }
+  .tag.contact { background: #f0fdf4; color: var(--success); }
+  .tag.protocol { background: #fdf4ff; color: #7c3aed; }
+  .card-toggle { color: var(--muted); font-size: 18px; transition: transform 0.2s; min-width: 20px; }
+  .card-toggle.open { transform: rotate(180deg); }
+
+  .card-body { display: none; padding: 0 18px 18px 18px; border-top: 1px solid var(--border); }
+  .card-body.open { display: block; }
+  .card-body h4 { color: var(--primary); margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .card-body p { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 8px; }
+  .card-body ul { padding-left: 18px; margin-bottom: 10px; }
+  .card-body li { font-size: 14px; line-height: 1.65; color: var(--text); margin-bottom: 3px; }
+  .card-body a { color: var(--primary); }
+
+  /* Alert boxes */
+  .alert { border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 13.5px; line-height: 1.6; }
+  .alert-danger { background: #fef2f2; border-left: 4px solid var(--danger); color: #7f1d1d; }
+  .alert-warning { background: #fffbeb; border-left: 4px solid #f59e0b; color: #78350f; }
+  .alert-info { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e3a5f; }
+  .alert-success { background: #f0fdf4; border-left: 4px solid #22c55e; color: #14532d; }
+
+  /* Contact grid */
+  .contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 10px 0; }
+  .contact-card { background: var(--bg); border-radius: 8px; padding: 12px; border: 1px solid var(--border); }
+  .contact-name { font-weight: 700; font-size: 13.5px; color: var(--primary); }
+  .contact-role { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .contact-phone { font-size: 13px; font-weight: 600; color: var(--text); }
+  .contact-email { font-size: 12px; color: var(--primary); word-break: break-all; }
+
+  /* Data table */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13.5px; }
+  th { background: var(--primary); color: white; padding: 8px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: var(--bg); }
+
+  /* No results */
+  .no-results { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .no-results .emoji { font-size: 48px; margin-bottom: 12px; }
+  .no-results h3 { font-size: 18px; margin-bottom: 8px; }
+
+  /* Section header */
+  .section-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 22px 0 10px; padding-left: 4px; }
+
+  mark { background: #fff176; border-radius: 2px; padding: 0 1px; }
+
+  @media (max-width: 600px) {
+    header { flex-wrap: wrap; }
+    .contact-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Trident <span>EM</span> Reference</div>
+    <div class="subtitle">HCA Trident Health System · Emergency Medicine Provider Database</div>
+  </div>
+  <div class="header-right">
+    <div class="badge">TeamHealth</div>
+    <div class="badge">2026</div>
+  </div>
+</header>
+<div class="filters" id="filters">
+  <button class="filter-btn all active" onclick="filterCat('all', this)">All Topics</button>
+  <button class="filter-btn" onclick="filterCat('contacts', this)">📞 Contacts</button>
+  <button class="filter-btn" onclick="filterCat('facilities', this)">🏥 Facilities</button>
+  <button class="filter-btn" onclick="filterCat('cardiovascular', this)">❤️ Cardiovascular</button>
+  <button class="filter-btn" onclick="filterCat('neuro', this)">🧠 Neurology</button>
+  <button class="filter-btn" onclick="filterCat('trauma', this)">🚑 Trauma</button>
+  <button class="filter-btn" onclick="filterCat('sepsis', this)">🦠 Sepsis</button>
+  <button class="filter-btn" onclick="filterCat('ob', this)">👶 OB/GYN & Peds</button>
+  <button class="filter-btn" onclick="filterCat('behavioral', this)">🧩 Behavioral Health</button>
+  <button class="filter-btn" onclick="filterCat('charting', this)">📋 Charting & EMR</button>
+  <button class="filter-btn" onclick="filterCat('radiology', this)">🔬 Radiology</button>
+  <button class="filter-btn" onclick="filterCat('patient-exp', this)">⭐ Patient Experience</button>
+  <button class="filter-btn" onclick="filterCat('admin', this)">📜 Admin & Medical Staff</button>
+  <button class="filter-btn" onclick="filterCat('residency', this)">🎓 Residency</button>
+  <button class="filter-btn" onclick="filterCat('physicians', this)">🩺 Physician Groups</button>
+  <button class="filter-btn" onclick="filterCat('cost', this)">💰 Cost & Resources</button>
+  <button class="filter-btn" onclick="filterCat('wellbeing', this)">💚 Well-Being</button>
+</div>
+<div class="search-bar">
+  <span style="font-size:18px;margin-right:8px;">🔍</span>
+  <input type="text" id="searchInput" placeholder="Search anything — STEMI, stroke, contacts, medications, transfer rules…" style="flex:1; padding:9px 4px; border:none; border-bottom:2px solid #dde2ec; font-size:15px; outline:none; background:transparent;" />
+  <button onclick="clearSearch()" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0 4px;line-height:1;" title="Clear search">&#10005;</button>
+</div>
+<div class="container" id="cardContainer">
+
+<!-- ===================== CONTACTS ===================== -->
+<div class="section-header" data-cat="contacts">Leadership & Key Contacts</div>
+
+<div class="card" data-cat="contacts" data-keywords="leadership contacts FMD AFMD medical director system medical director scott hayes neal shelley ken perry melanie gates amanda nichols kellen homer phone email teamhealth summerville brighton park cane bay james island moncks corner long point johns island AFMD assistant">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">👔</div>
+    <div style="flex:1">
+      <div class="card-title">Facility Medical Directors & Lead APCs</div>
+      <div class="card-tags"><span class="tag contact">Key Contacts</span><span class="tag">Leadership</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-role">System Medical Director & FMD – Trident Medical Center / Centre Pointe FSED</div>
+        <div class="contact-name">Dr. Scott Hayes</div>
+        <div class="contact-phone">📞 (843) 725-9098</div>
+        <div class="contact-email">scott_hayes@teamhealth.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">FMD – Summerville MC, Brighton Park, Cane Bay & James Island FSED</div>
+        <div class="contact-name">Dr. Neal Shelley</div>
+        <div class="contact-phone">📞 (843) 340-1842</div>
+        <div class="contact-email">neal_shelley@teamhealth.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">AFMD – Trident Medical Center; FMD – Moncks Corner FSED & Long Point FSED</div>
+        <div class="contact-name">Dr. Ken Perry</div>
+        <div class="contact-phone">📞 (401) 741-4131</div>
+        <div class="contact-email">kenneth_perry@teamhealth.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">AFMD – Summerville MC; FMD – Johns Island FSED</div>
+        <div class="contact-name">Dr. Melanie Gates</div>
+        <div class="contact-phone">📞 (803) 517-1532</div>
+        <div class="contact-email">melanie_gates@teamhealth.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">System Medical Director – APCs; Lead APC – Trident Medical Center</div>
+        <div class="contact-name">Amanda Nichols</div>
+        <div class="contact-phone">📞 (843) 860-2098</div>
+        <div class="contact-email">amanda_nichols@teamhealth.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">Lead APC – Summerville Medical Center</div>
+        <div class="contact-name">Kellen Homer</div>
+        <div class="contact-phone">📞 (740) 296-4763</div>
+        <div class="contact-email">kellenhomer@gmail.com</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="contacts" data-keywords="residency program director administrator contact Connors Wyatt chief resident email ERAS application">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🎓</div>
+    <div style="flex:1">
+      <div class="card-title">Residency Program Contacts</div>
+      <div class="card-tags"><span class="tag contact">Key Contacts</span><span class="tag">Residency</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-role">Program Director</div>
+        <div class="contact-name">Dr. Nicholas Connors</div>
+        <div class="contact-email">nicholas.connors@hcahealthcare.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">Program Administrator</div>
+        <div class="contact-name">Teena Wyatt</div>
+        <div class="contact-email">teena.wyatt@hcahealthcare.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-role">Chief Residents</div>
+        <div class="contact-name">Chief Resident Email</div>
+        <div class="contact-email">tridentemchiefs@gmail.com</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="contacts" data-keywords="hospital administration CEO CMO ED director Trident Summerville Jeff Wilson Jeff Taylor Jane Appleby Sarah Young Jenna">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏛️</div>
+    <div style="flex:1">
+      <div class="card-title">Hospital Administration</div>
+      <div class="card-tags"><span class="tag contact">Key Contacts</span><span class="tag">Administration</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>Trident Medical Center</h4>
+    <div class="contact-grid">
+      <div class="contact-card"><div class="contact-role">CEO</div><div class="contact-name">Jeff Wilson</div></div>
+      <div class="contact-card"><div class="contact-role">CMO</div><div class="contact-name">Jane Appleby, MD</div></div>
+      <div class="contact-card"><div class="contact-role">ED Director</div><div class="contact-name">Sarah Young</div></div>
+    </div>
+    <h4>Summerville Medical Center</h4>
+    <div class="contact-grid">
+      <div class="contact-card"><div class="contact-role">CEO</div><div class="contact-name">Jeff Taylor</div></div>
+      <div class="contact-card"><div class="contact-role">CNO</div><div class="contact-name">Celeste Brizzee</div></div>
+      <div class="contact-card"><div class="contact-role">ED Director</div><div class="contact-name">Travis Burbage</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="cardiovascular" data-keywords="cardiology cardiologist MUSC Atlantic Cardiovascular Lowcountry Funke Coker Kennedy McCarty Hodskins Sandhu Mataosky Looser Pringle Saunders Fry Tina Ellis Trinka Douglas consult STEMI">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">💊</div>
+    <div style="flex:1">
+      <div class="card-title">Cardiology Groups & Consult Routing</div>
+      <div class="card-tags"><span class="tag contact">Key Contacts</span><span class="tag">Cardiovascular</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">If any patient ever had a cardiac catheter by anyone in a group, call that group for consult.</div>
+    <h4>MUSC Health Atlantic Cardiovascular Associates</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Dr. Eric Funke</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Chris Kennedy</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Chris McCarty</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Monique Sandhu</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Mark Mataosky</div>
+        <div class="contact-role">Covers SMC</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Jason Coker</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Emily Hodskins</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Trinka Douglas, PA</div>
+        <div class="contact-role">APP</div>
+      </div>
+    </div>
+    <h4>Lowcountry Cardiology</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Dr. Donald Saunders</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Robert Pringle</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Patrick Looser</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. John Fry</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Tina Ellis, PA</div>
+        <div class="contact-role">APP</div>
+      </div>
+    </div>
+    <h4>Routing Rules</h4>
+    <ul>
+      <li>STEMI → call cath lab, activate appropriate cardiology group</li>
+      <li>NSTEMI → admit to hospitalist, consult cardiology</li>
+      <li>Elevated troponins or worrisome patients → consult cardiology</li>
+      <li>Sign MUSE for all EKGs</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== FACILITIES ===================== -->
+<div class="section-header" data-cat="facilities">Facilities & Locations</div>
+
+<div class="card" data-cat="facilities" data-keywords="Trident Medical Center TMC address phone 321 beds level II trauma 51000 volume ED Charleston North Charleston cardiology stroke burn">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏥</div>
+    <div style="flex:1">
+      <div class="card-title">Trident Medical Center (TMC)</div>
+      <div class="card-tags"><span class="tag">321 Beds</span><span class="tag urgent">Level II Trauma</span><span class="tag">51,000 visits/yr</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 9330 Medical Plaza Dr., Charleston, SC 29406</p>
+    <p><strong>📞 Phone:</strong> (843) 847-4160</p>
+    <p><strong>System Medical Director & FMD:</strong> Dr. Scott Hayes</p>
+    <p><strong>Assistant Medical Director (AFMD):</strong> Dr. Ken Perry</p>
+    <h4>Key Services</h4>
+    <ul>
+      <li>Level II Trauma Center (busiest in the Lowcountry)</li>
+      <li>STEMI & Comprehensive Cardiac Center</li>
+      <li>Thrombectomy-capable Stroke Center (Primary Plus Stroke Center – DNV)</li>
+      <li>Joseph M. Still Burn Clinic (outpatient — Mon & Wed mornings; patients NPO by 8am at front of hospital)</li>
+      <li>South Carolina Institute for Robotic Surgery</li>
+      <li>Trident Breast Care Center</li>
+      <li>ICU — Closed unit with Intensive Care Consortium (ICC) intensivist group</li>
+    </ul>
+    <h4>Admissions</h4>
+    <ul>
+      <li>Medical admissions → hospitalist (get code status to avoid delay)</li>
+      <li>Surgical cases → surgical service (may request hospitalist admission)</li>
+      <li>Other specialists → we place the admit order via admit order set</li>
+      <li>ICU → closed unit; FSED can admit directly but ICU may ask for ED-to-ED transfer</li>
+    </ul>
+    <div class="alert alert-warning">Burns: Admit to Augusta. If in doubt, call Augusta Burn Center. Burn clinic at TMC Monday & Wednesday mornings.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Summerville Medical Center SMC address phone 124 beds OB pediatric peds ED 71000 volume Dorchester Berkeley">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏥</div>
+    <div style="flex:1">
+      <div class="card-title">Summerville Medical Center (SMC)</div>
+      <div class="card-tags"><span class="tag">124 Beds</span><span class="tag">OB & Peds</span><span class="tag">71,000 visits/yr</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 295 Midland Pkwy, Summerville, SC 29485</p>
+    <p><strong>📞 Phone:</strong> (843) 970-5160</p>
+    <p><strong>📞 L&D Nursing Station:</strong> (843) 970-5270</p>
+    <p><strong>FMD:</strong> Dr. Neal Shelley</p>
+    <p><strong>Assistant Medical Director (AFMD):</strong> Dr. Melanie Gates</p>
+    <h4>Key Services</h4>
+    <ul>
+      <li>Main ED (~51,000 visits/yr) + Pediatric ED (~20,000 visits/yr)</li>
+      <li>Dedicated Pediatric Emergency Department (24/7, up to age 17)</li>
+      <li>OB/GYN — all OB cases in the system</li>
+      <li>ICU — intensivist in house 8am–4pm daily</li>
+    </ul>
+    <h4>Admissions</h4>
+    <ul>
+      <li>Medical admissions → hospitalist (get code status to avoid delay)</li>
+      <li>ICU → call ICU doctor on call; in house 8am–4pm; call early if ICU expected</li>
+      <li>OB admits → primary OB group; in-house OB hospitalist for unassigned/emergent backup (843-970-5739)</li>
+    </ul>
+    <div class="alert alert-info">SMC only: OB/GYN, Pediatric Hospitalist & Intensivist services.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Brighton Park FSED freestanding emergency department Summerville affiliate 11 rooms CT XR labs telemedicine">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">Brighton Park FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">SMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 1626 N. Main Street, Summerville, SC 29483</p>
+    <p><strong>Affiliate:</strong> Summerville Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Neal Shelley</p>
+    <h4>Capabilities</h4>
+    <ul>
+      <li>11 patient rooms (including 1 trauma/resus room)</li>
+      <li>In-house diagnostic labs, CT, X-Ray</li>
+      <li>Telemedicine services</li>
+    </ul>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions & transfers → primarily SMC unless specialty not available there</li>
+      <li>OB ultrasounds → always transfer to SMC</li>
+      <li>MRI/US → transfer to SMC</li>
+    </ul>
+    <div class="alert alert-info">All OB US go to SMC regardless of FSED location.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Centre Pointe FSED freestanding emergency North Charleston 12 rooms CT XR Tanger outlets Emmett Davis TMC affiliate">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">Centre Pointe FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">TMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 5249 Emmett I. Davis Jr. Ave N, North Charleston, SC 29418</p>
+    <p><em>(Near Tanger Outlets and North Charleston Coliseum)</em></p>
+    <p><strong>Affiliate:</strong> Trident Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Scott Hayes</p>
+    <h4>Capabilities</h4>
+    <ul>
+      <li>12,300 sq ft facility — 12 private patient care rooms (including Trauma/Resus)</li>
+      <li>In-house labs, CT, X-Ray</li>
+    </ul>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions & transfers → primarily TMC unless specialty unavailable (OB/GYN & Peds → SMC)</li>
+      <li>MRI/US → transfer to TMC</li>
+      <li>OB ultrasounds → always transfer to SMC</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Moncks Corner FSED freestanding emergency department Berkeley County 17A TMC affiliate transfer">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">Moncks Corner FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">TMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 401 North Live Oak Dr. Hwy 17A, Moncks Corner, SC 29461</p>
+    <p><strong>📞 Phone:</strong> (843) 761-8721</p>
+    <p><strong>Affiliate:</strong> Trident Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Ken Perry</p>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions & transfers → primarily TMC unless specialty unavailable (OB/GYN & Peds → SMC)</li>
+      <li>MRI/US → transfer to TMC</li>
+      <li>All OB US → SMC</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="James Island FSED freestanding emergency 945 Folly Road Charleston TMC affiliate 854-214-2510 Neal Shelley FMD">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">James Island FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">TMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 945 Folly Road, Charleston, SC 29412</p>
+    <p><strong>📞 Phone:</strong> (854) 214-2510</p>
+    <p><strong>Affiliate:</strong> Trident Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Neal Shelley</p>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions &amp; transfers → primarily TMC unless specialty unavailable (OB/GYN &amp; Peds → SMC)</li>
+      <li>MRI/US → transfer to TMC</li>
+      <li>All OB ultrasounds → SMC</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Long Point FSED freestanding emergency Mount Pleasant 945 Long Point Road TMC affiliate Ken Perry FMD opening 2026">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">Long Point FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">TMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> 945 Long Point Road, Mount Pleasant, SC 29464</p>
+    <p><em>(Near Belle Hall Shopping Center / Chick-fil-A on Long Point Rd)</em></p>
+    <p><strong>Affiliate:</strong> Trident Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Ken Perry</p>
+    <div class="alert alert-info">New facility — opening Fall 2026. Confirm phone number once operational.</div>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions &amp; transfers → primarily TMC unless specialty unavailable (OB/GYN &amp; Peds → SMC)</li>
+      <li>MRI/US → transfer to TMC</li>
+      <li>All OB ultrasounds → SMC</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="Johns Island FSED freestanding emergency Maybank Highway Zelasko TMC affiliate Melanie Gates FMD opening 2026">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏨</div>
+    <div style="flex:1">
+      <div class="card-title">Johns Island FSED</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag">TMC Affiliate</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>📍 Address:</strong> Maybank Highway near Zelasko Road, Johns Island, SC</p>
+    <p><strong>Affiliate:</strong> Trident Medical Center</p>
+    <p><strong>FMD:</strong> Dr. Melanie Gates</p>
+    <div class="alert alert-info">New facility — opening late 2026. Exact street address and phone number to be confirmed upon opening. 12-bed facility with trauma room, advanced imaging, and telemedicine.</div>
+    <h4>Transfer Routing</h4>
+    <ul>
+      <li>Admissions &amp; transfers → primarily TMC unless specialty unavailable (OB/GYN &amp; Peds → SMC)</li>
+      <li>MRI/US → transfer to TMC</li>
+      <li>All OB ultrasounds → SMC</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="facilities" data-keywords="FSED transfer admission routing rules OB US ultrasound Propofol ICU accept call transfer center co-sign EDDOC AMA partial refuse transport STEMI CVA stroke trauma closest facility non-HCA">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🔄</div>
+    <div style="flex:1">
+      <div class="card-title">FSED Transfer & Admission Rules (Quick Reference)</div>
+      <div class="card-tags"><span class="tag">FSED</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <table>
+      <tr><th>FSED</th><th>Default Transfer</th><th>FMD</th><th>Exceptions</th></tr>
+      <tr><td><strong>Centre Pointe</strong></td><td>TMC</td><td>Dr. Scott Hayes</td><td>OB/GYN &amp; Peds → SMC</td></tr>
+      <tr><td><strong>Moncks Corner</strong></td><td>TMC</td><td>Dr. Ken Perry</td><td>OB/GYN &amp; Peds → SMC</td></tr>
+      <tr><td><strong>James Island</strong></td><td>TMC</td><td>Dr. Neal Shelley</td><td>OB/GYN &amp; Peds → SMC</td></tr>
+      <tr><td><strong>Long Point</strong></td><td>TMC</td><td>Dr. Ken Perry</td><td>OB/GYN &amp; Peds → SMC</td></tr>
+      <tr><td><strong>Johns Island</strong></td><td>TMC</td><td>Dr. Melanie Gates</td><td>OB/GYN &amp; Peds → SMC</td></tr>
+      <tr><td><strong>Brighton Park</strong></td><td>SMC</td><td>Dr. Neal Shelley</td><td>Specialty unavailable → TMC</td></tr>
+      <tr><td><strong>All FSEDs</strong></td><td colspan="3">All OB ultrasounds → SMC regardless of FSED affiliation</td></tr>
+    </table>
+    <h4>General Transfer Rules</h4>
+    <ul>
+      <li>Call ED MD for acceptance, then co-sign and use EDDOC</li>
+      <li>All transfers → use Transfer Center (One-Step)</li>
+      <li>Propofol → requires 2 providers present</li>
+      <li>ICU admits from FSEDs → send ED-to-ED at TMC</li>
+      <li>All FSEDs have XR and CT capability</li>
+      <li><strong>Ultrasound (MRI/US) requires transport to SMC or TMC</strong> — not available at FSEDs</li>
+    </ul>
+    <h4>Patient Transport & Consent</h4>
+    <ul>
+      <li><strong>All patients moving between facilities must be offered transport</strong> (ambulance/EMS)</li>
+      <li>If a patient declines offered transport and elects to drive themselves or arrange their own transport, <strong>document the refusal</strong> and complete a <strong>"Partial AMA"</strong> in the chart</li>
+      <li>Clearly document that transport was offered, patient was informed of the risks of self-transport, and patient declined</li>
+    </ul>
+    <div class="alert alert-danger">
+      <strong>Time-Critical Emergencies — Closest Appropriate Facility:</strong><br>
+      For severe trauma, STEMI, or CVA/stroke, transfer to the <strong>closest appropriate facility</strong> — even if that is <em>not</em> an HCA facility. Patient safety and time-to-treatment take priority over system affiliation.
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CARDIOVASCULAR ===================== -->
+<div class="section-header" data-cat="cardiovascular">Cardiovascular Protocols</div>
+
+<div class="card" data-cat="cardiovascular" data-keywords="STEMI cath lab cardiology activation EKG MUSE sign cardiac catheter heart attack MI">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">❤️</div>
+    <div style="flex:1">
+      <div class="card-title">STEMI Protocol</div>
+      <div class="card-tags"><span class="tag urgent">Time Sensitive</span><span class="tag protocol">Protocol</span><span class="tag">Cardiovascular</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">STEMI = Immediate activation. Door-to-balloon time is critical.</div>
+    <ul>
+      <li>Activate cath lab immediately upon STEMI identification</li>
+      <li>Call the cardiology group that previously performed the patient's cath (if applicable)</li>
+      <li>If unassigned → call attending cardiologist on call</li>
+      <li>Sign MUSE for all EKGs</li>
+      <li>STEMI and Comprehensive Cardiac Center at TMC</li>
+    </ul>
+    <h4>Cardiology Groups</h4>
+    <p><strong>Trident/Atlantic Cardiology:</strong> Funke, Coker ×2, Kennedy, McCarty, Yarbrough, Sandhu, Mataosky</p>
+    <p><strong>Lowcountry Cardiology:</strong> Looser, Pringle, Saunders (Chris Davis PA usually in house)</p>
+    <div class="alert alert-info">Accredited Chest Pain Center with PCI at TMC; Accredited Chest Pain Center at SMC (Society of Cardiovascular Care).</div>
+  </div>
+</div>
+
+<div class="card" data-cat="cardiovascular" data-keywords="NSTEMI troponin elevated troponins hospitalist admit consult cardiology worrisome ACS chest pain">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🫀</div>
+    <div style="flex:1">
+      <div class="card-title">NSTEMI / Elevated Troponins</div>
+      <div class="card-tags"><span class="tag">Cardiovascular</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>NSTEMI → admit to hospitalist</li>
+      <li>Consult cardiology for elevated troponins and worrisome patients</li>
+      <li>Sign MUSE for all EKGs</li>
+      <li>Get code status prior to admission to avoid delay in placement of admit orders</li>
+    </ul>
+    <div class="alert alert-warning">TMC and SMC use different troponin assay systems — be aware when comparing values across sites.</div>
+  </div>
+</div>
+
+<!-- ===================== NEURO ===================== -->
+<div class="section-header" data-cat="neuro">Neurology / Stroke Protocols</div>
+
+<div class="card" data-cat="neuro" data-keywords="code stroke TNKase Tenecteplase 45 minutes tele-neurology CTA CTP Cardene BP blood pressure NIHSS thrombectomy code net ICU admit FSED">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🧠</div>
+    <div style="flex:1">
+      <div class="card-title">Code Stroke Protocol</div>
+      <div class="card-tags"><span class="tag urgent">Time Sensitive</span><span class="tag protocol">Protocol</span><span class="tag">Neuro</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">Goal: Tenecteplase (TNKase) within 45 minutes of arrival. Code Stroke can be called by any team member.</div>
+    <h4>Activation Criteria</h4>
+    <p>Any patient with neuro deficit symptoms with onset within 24 hours. Any team member (nurse, tech, APC, physician) can call Code Stroke.</p>
+    <h4>Thrombolytic Agent</h4>
+    <div class="alert alert-info">
+      <strong>We use Tenecteplase (TNKase)</strong> — preferred over tPA due to ease of administration (single IV bolus). tPA is no longer used in this system.
+    </div>
+    <h4>Imaging</h4>
+    <ul>
+      <li>CT and CTA for all patients within 24 hours of symptom onset</li>
+      <li><strong>CT Perfusion (CTP) at TMC/SMC only</strong> — CTP is <em>not</em> available at FSEDs</li>
+      <li>At FSEDs: obtain CT + CTA; if concern for LVO or intervention candidacy, discuss the case directly with the neurologist and neurointerventional physician</li>
+    </ul>
+    <h4>BP Management</h4>
+    <ul>
+      <li>Cardene (nicardipine) for BP control — start ASAP</li>
+      <li>Goal SBP &lt;180 prior to thrombolytic administration</li>
+    </ul>
+    <h4>Tele-Neurology Role</h4>
+    <ul>
+      <li>Orders Tenecteplase if indicated</li>
+      <li>Places note in Meditech</li>
+      <li>Documents NIHSS</li>
+    </ul>
+    <h4>Thrombectomy (Code NET)</h4>
+    <div class="alert alert-warning">For large vessel occlusion (LVO): call the <strong>neurointerventionalist on call</strong>. If tele-neurology determines intervention is indicated, call a <strong>"CODE NET"</strong>.</div>
+    <ul>
+      <li>Code NET patients → admit to ICU</li>
+    </ul>
+    <h4>Other Rules</h4>
+    <ul>
+      <li>Fall + intracranial bleed → trauma consult after discussion with neurosurgery</li>
+    </ul>
+    <div class="alert alert-info">TMC is a thrombectomy-capable Stroke Center and Primary Plus Stroke Center (DNV certified).</div>
+  </div>
+</div>
+
+<!-- ===================== TRAUMA ===================== -->
+<div class="section-header" data-cat="trauma">Trauma Protocols</div>
+
+<div class="card" data-cat="trauma" data-keywords="trauma level I criteria GCS BP respiratory rate penetrating flail chest fracture amputation skull burn falls Level 1 activation indicators">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🚑</div>
+    <div style="flex:1">
+      <div class="card-title">TMC Level I Trauma Alert Criteria</div>
+      <div class="card-tags"><span class="tag urgent">Immediate Activation</span><span class="tag protocol">Protocol</span><span class="tag">Trauma</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">ED MD must be in room by patient arrival for all trauma activations.</div>
+    <ul>
+      <li>Glasgow Coma Score &lt;13</li>
+      <li>Systolic BP &lt;90 (child &lt;1yr: &lt;60–70; &gt;1yr: &lt;70 + 2×age in yrs)</li>
+      <li>Respiratory rate &lt;10 or &gt;29 (child &lt;10 or &gt;60; infant &lt;20 if ≤1 yr)</li>
+      <li>Penetrating injury to head, neck, torso, or extremities proximal to elbow/knee</li>
+      <li>Flail chest</li>
+      <li>Two or more proximal long bone fractures or any open long bone fracture</li>
+      <li>Crushed, de-gloved, mangled, or pulseless extremity</li>
+      <li>Amputation proximal to wrist or ankle</li>
+      <li>Clinically apparent pelvic fracture</li>
+      <li>Open or depressed skull fracture</li>
+      <li>New onset of paralysis or suspicion of spinal cord injury</li>
+      <li>Active airway assistance post-traumatic event</li>
+      <li>Injury requiring blood products to maintain hemodynamic stability</li>
+      <li>Falls &gt;20 feet in adults (1 story = 10 ft)</li>
+      <li>Burns: &gt;15% 2nd/3rd degree, circumferential burns to extremity/torso, inhalation burns</li>
+      <li>Clinical Discretion</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="trauma" data-keywords="trauma level II criteria falls intrusion ejection motorcycle pedestrian bicycle steering wheel windshield burns TBSA mechanism">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🚗</div>
+    <div style="flex:1">
+      <div class="card-title">TMC Level II Trauma Alert Criteria</div>
+      <div class="card-tags"><span class="tag">Trauma</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>Falls &gt;10 feet or 2–3× the height of a child</li>
+      <li>Intrusion &gt;12 inches occupant side; &gt;18 inches any side</li>
+      <li>Ejection (partial or complete) from automobile</li>
+      <li>Death in same passenger compartment</li>
+      <li>Vehicle telemetry consistent with high-risk injury (steering wheel deformity, starred windshield)</li>
+      <li>Pedestrian or bicyclist thrown, run over, or impact &gt;20 mph</li>
+      <li>Motorcycle crash &gt;20 mph</li>
+      <li>Burns: &gt;10% TBSA 2nd/3rd degree not meeting Level I</li>
+      <li>Clinical Discretion</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="trauma" data-keywords="trauma special considerations elderly age 55 65 SBP shock anticoagulation bleeding children pregnancy alcohol drugs">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">⚠️</div>
+    <div style="flex:1">
+      <div class="card-title">Trauma Special Considerations</div>
+      <div class="card-tags"><span class="tag">Trauma</span><span class="tag">High Risk</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li><strong>Age ≥55:</strong> Increased risk of injury/death</li>
+      <li><strong>Age ≥65:</strong> SBP &lt;110 may represent shock</li>
+      <li>Low-impact mechanisms (e.g., ground-level falls) may result in severe injury in elderly</li>
+      <li>Patients on anticoagulation with head injury → at risk for rapid deterioration</li>
+      <li><strong>Children (&lt;10 years)</strong> — use pediatric vital sign thresholds</li>
+      <li><strong>Pregnancy &gt;20 weeks</strong> with associated mechanism of injury</li>
+      <li>Alcohol or illicit drugs → evaluate with high suspicion for occult injuries</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== SEPSIS ===================== -->
+<div class="section-header" data-cat="sepsis">Sepsis</div>
+
+<div class="card" data-cat="sepsis" data-keywords="sepsis antibiotics 15 minutes 30cc/kg bolus IBW order sets hospitalist RN communication reassessment documentation categories septic shock">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🦠</div>
+    <div style="flex:1">
+      <div class="card-title">Sepsis Protocol</div>
+      <div class="card-tags"><span class="tag urgent">Time Sensitive</span><span class="tag protocol">Protocol</span><span class="tag">Sepsis</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">Antibiotics within 15 minutes of sepsis recognition. 30cc/kg bolus based on Ideal Body Weight (IBW).</div>
+    <h4>Core Steps</h4>
+    <ul>
+      <li>Use sepsis order sets — for nearly all conditions, have fail-safe mechanisms to avoid fallouts</li>
+      <li>Antibiotics within 15 minutes</li>
+      <li>Direct communication with RN</li>
+      <li>30cc/kg IV fluid bolus (based on IBW)</li>
+      <li>Reassessment and documentation</li>
+      <li>Know the categories of sepsis</li>
+      <li>Discuss with hospitalist</li>
+      <li>Add-on order set as needed</li>
+    </ul>
+    <h4>ALTO Protocol</h4>
+    <p>Use ALTO (Alternative to Opioids) where applicable in sepsis management.</p>
+    <h4>Resources</h4>
+    <p><a href="https://mediaconnect.medcity.net/media/Sepsis+Initiative/0_hcqr7olk" target="_blank">Sepsis Provider 2018 Video – Jeffrey Guy</a></p>
+  </div>
+</div>
+
+<!-- ===================== OB/GYN & PEDS ===================== -->
+<div class="section-header" data-cat="ob">OB/GYN & Pediatrics</div>
+
+<div class="card" data-cat="ob" data-keywords="OB active labor TMC Trident delivery OB hospitalist OBHG Neonatologist transfer SMC Medtrust Neomate MUSC 32 weeks 1500 grams L&D">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🤱</div>
+    <div style="flex:1">
+      <div class="card-title">OB / Active Labor at TMC ED</div>
+      <div class="card-tags"><span class="tag urgent">Time Sensitive</span><span class="tag protocol">Protocol</span><span class="tag">OB/GYN</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">OB services are at SMC only. TMC ED may receive patients in active labor — follow this protocol.</div>
+    <h4>Initial Steps at TMC ED</h4>
+    <ul>
+      <li>Triage patient and complete MSE; ED MD determines treatment and stabilization needs</li>
+      <li>Consult/update OB MD: private OB if known, otherwise call OBHG on-call — <strong>1st Call: (843) 830-5512</strong> | 2nd Call: (843) 509-8701</li>
+      <li>Notify Neonatologist if preterm or unknown gestational status</li>
+    </ul>
+    <h4>Equipment Ready Box</h4>
+    <ul>
+      <li>Panda Warmer</li>
+      <li>OB 'ready box' (1 on Panda Warmer, 1 in ED Room 6)</li>
+      <li>Portable fetal monitor</li>
+    </ul>
+    <h4>Transfer to SMC (if stable)</h4>
+    <ul>
+      <li>Use One-Step Transfer Center → Medtrust transport</li>
+      <li>Request Level I or II for timely EMS ETA</li>
+      <li>Backup: Charleston County EMS</li>
+    </ul>
+    <h4>If Delivery at TMC Occurs</h4>
+    <ul>
+      <li>Immediate registration and banding of infant</li>
+      <li>&gt;32 weeks / &gt;1500 grams → transfer to SMC via Medtrust (use Neomate device if &lt;2268g / 5 lb)</li>
+      <li>&lt;32 weeks / &lt;1500 grams → transfer to MUSC Level II or greater (arrange via One-Step Transfer Center)</li>
+    </ul>
+    <div class="alert alert-warning">After delivery: return used OB ready box to SMC L&D via routine courier. Notify TMC ED Director. Conduct debrief within 24–36 hrs.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="ob" data-keywords="pediatrics peds SMC only Summerville pediatric hospitalist intensivist children">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">👶</div>
+    <div style="flex:1">
+      <div class="card-title">Pediatrics</div>
+      <div class="card-tags"><span class="tag">OB/GYN & Peds</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">Dedicated Pediatric ED at SMC only (24/7, patients up to age 17).</div>
+    <ul>
+      <li>Pediatric Hospitalist and Intensivist available at SMC</li>
+      <li>FSED pediatric patients → transfer to SMC</li>
+      <li>TMC does not have dedicated peds services — transfer to SMC</li>
+      <li>Burn injuries in children → Admit to Augusta Burn Center</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== BEHAVIORAL HEALTH ===================== -->
+<div class="section-header" data-cat="behavioral">Behavioral Health</div>
+
+<div class="card" data-cat="behavioral" data-keywords="behavioral health BH order sets SI HI suicidal homicidal psychosis CIT EMPATH Live Oak tele-psych inpatient psych BAU hold Part I Part II discharge instructions">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🧩</div>
+    <div style="flex:1">
+      <div class="card-title">Behavioral Health Protocol</div>
+      <div class="card-tags"><span class="tag protocol">Protocol</span><span class="tag">Behavioral Health</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>Order Sets</h4>
+    <ul>
+      <li>BH order sets for all patients presenting with SI, HI, or acute psychosis</li>
+      <li>Do NOT use BH order sets for primary substance abuse</li>
+      <li>For safety or substance abuse resources: order CIT consult → click safety or substance abuse resources</li>
+    </ul>
+    <h4>Disposition Rules</h4>
+    <ul>
+      <li>If patient has a medical component they would not be discharged without → admit medically</li>
+      <li>BH hold status or BAU only once patient is stable for discharge absent BH component</li>
+    </ul>
+    <h4>Charting Requirements for BH Holds</h4>
+    <ul>
+      <li>ED BH Hold order sets on all held BH patients</li>
+      <li>PRN meds for anxiety/agitation + home meds ordered</li>
+      <li>Discharge instructions in PDOC for all BAU/ED BH area patients (not being acutely admitted)</li>
+      <li>Print PDOC discharge instructions once cleared by psychiatry — these patients remain our responsibility</li>
+      <li>E-prescribe non-psychiatric meds (e.g., UTI) with instructions in Meditech</li>
+    </ul>
+    <h4>Resources</h4>
+    <ul>
+      <li>Inpatient psych: Live Oak</li>
+      <li>Tele-psych available at all sites</li>
+      <li>Straightforward psych → TMC Behavioral Health</li>
+      <li>EMPATH: 4th floor at TMC — once medically cleared</li>
+      <li>Part I and Part II documentation required</li>
+    </ul>
+    <div class="alert alert-info">ED BH video: <a href="https://mediaconnect.medcity.net/media/Provider+education+on+utilizing+the+functionality+in+the+ER+Behavioral+Health+Order+Sets.++/0_h0qi16co" target="_blank">4-min provider education video (HCA network required)</a></div>
+    <h4>Daily Rounding Requirements</h4>
+    <div class="alert alert-danger">
+      ⚠️ <strong>THIS MUST BE DONE DAILY</strong> for all boarded BH patients at TMC and SMC.
+    </div>
+    <ul>
+      <li>The <strong>2nd Doc at TMC or SMC</strong> is responsible for daily rounding on all boarded BH patients</li>
+      <li>Each patient requires an updated <strong>Overall Risk Level (ORL)</strong> every day</li>
+      <li>A <strong>daily progress note</strong> must be completed, including updates on <strong>disposition status</strong></li>
+      <li>To document: In Meditech, add a note section by selecting <strong>"Add Section"</strong> and choosing <strong>"Behavioral Health Addendum"</strong></li>
+      <li>Note should address: current ORL, mental status, safety concerns, active placement efforts, and any changes in plan</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== RADIOLOGY ===================== -->
+<div class="section-header" data-cat="radiology">Radiology & Imaging</div>
+
+<div class="card" data-cat="radiology" data-keywords="radiology imaging MRI ultrasound CT XR IR interventional 24/7 live reads on call pregnancy test HCG creatinine contrast CIN eGFR">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🔬</div>
+    <div style="flex:1">
+      <div class="card-title">Radiology Overview & Availability</div>
+      <div class="card-tags"><span class="tag">Radiology</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>All studies read 24/7 in near real time</li>
+      <li>MRI (and possibly US) on call at night</li>
+      <li>IR (Interventional Radiology) available</li>
+      <li>All FSEDs have XR and CT capability</li>
+      <li>MRI and US → transfer to TMC (Centre Pointe/Moncks Corner) or SMC (Brighton Park)</li>
+      <li>OB-related US → all patients transferred to SMC regardless of location</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="radiology" data-keywords="pregnancy test imaging XR CT head cervical pelvis thoracic lumbar HCG pregnancy questionnaire liability release form">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🤰</div>
+    <div style="flex:1">
+      <div class="card-title">Pregnancy Testing for Imaging</div>
+      <div class="card-tags"><span class="tag">Radiology</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>No Pregnancy Test Required (with shielding + Pregnancy Questionnaire & Liability Release)</h4>
+    <ul>
+      <li>XR: Head, face, cervical spine, portable CXR, shoulder, upper extremity, lower extremity from knees down</li>
+      <li>CT: Head, face, cervical, knee and below</li>
+    </ul>
+    <h4>Pregnancy Test Required (in eligible patients)</h4>
+    <ul>
+      <li>XR: Thoracic/lumbar spine, chest PA/Lat, abdomen, pelvis, hip, femur (unless emergency with physician authorization)</li>
+      <li>All other CT not listed above → HCG required</li>
+    </ul>
+    <div class="alert alert-info">Refer to "Imaging Guideline for Pending Pregnancy Testing in the Emergency Dept." Policy for full details.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="radiology" data-keywords="AUC appropriate use criteria clinical decision support CDS Siemens CT MRI PET NM hip coronary PE headache low back shoulder lung cervical neck pain outpatient ED observation">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📐</div>
+    <div style="flex:1">
+      <div class="card-title">Appropriate Use Criteria (AUC) for Advanced Imaging</div>
+      <div class="card-tags"><span class="tag">Radiology</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p>Implemented via Clinical Decision Support (CDS) — Siemens Healthcare. Go-live: May 11, 2021.</p>
+    <h4>Applies To</h4>
+    <p>Outpatient, ED, Same Day Surgery, and Observation status. Modalities: CT, MRI, PET, NM.</p>
+    <h4>8 Clinical Priority Areas (CPAs)</h4>
+    <ul>
+      <li>Hip pain</li>
+      <li>Coronary artery disease</li>
+      <li>Suspected pulmonary embolism</li>
+      <li>Headache</li>
+      <li>Low back pain</li>
+      <li>Shoulder pain</li>
+      <li>Cancer of the lung</li>
+      <li>Cervical or neck pain</li>
+    </ul>
+    <h4>Workflow</h4>
+    <ul>
+      <li>Web browser opens when ordering — select reason for imaging and continue</li>
+      <li>Provider is never prevented from completing the order</li>
+      <li>When the complete bar appears, you are done</li>
+      <li>Trauma exemption: select "Trauma" to bypass CDS screens</li>
+      <li>Level 1 Triage: CDS screens will not launch</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="radiology" data-keywords="creatinine contrast CIN contrast-induced nephropathy eGFR risk factors age diabetes hypertension metformin renal transplant dialysis iodinated">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🧪</div>
+    <div style="flex:1">
+      <div class="card-title">Creatinine Testing & Contrast Media</div>
+      <div class="card-tags"><span class="tag">Radiology</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>Risk Factors Warranting Baseline Renal Function Assessment</h4>
+    <ul>
+      <li>Age &gt;60</li>
+      <li>History of renal disease: dialysis, kidney transplant, single kidney, renal cancer, renal surgery</li>
+      <li>Hypertension requiring medical therapy</li>
+      <li>History of diabetes mellitus</li>
+      <li>Metformin or metformin-containing medications (risk of lactic acidosis if AKI develops)</li>
+    </ul>
+    <div class="alert alert-info">Patients without risk factors above do not require baseline creatinine before iodinated contrast administration.</div>
+    <p>Acceptable interval: up to 30 days for outpatients; shorter for inpatients, new risk factors, or heightened renal risk.</p>
+  </div>
+</div>
+
+<!-- ===================== CHARTING & EMR ===================== -->
+<div class="section-header" data-cat="charting">Charting & EMR</div>
+
+<div class="card" data-cat="charting" data-keywords="Meditech EMR charting 24 hours sign co-sign APC level 2 admitted home access e-prescribe electronic prescribing">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📋</div>
+    <div style="flex:1">
+      <div class="card-title">EMR / Charting (Meditech) Requirements</div>
+      <div class="card-tags"><span class="tag">Charting</span><span class="tag">EMR</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>All charts signed within 24 hours</li>
+      <li>Home access available</li>
+      <li>Co-sign APC charts (3 attestation levels) and resident charts</li>
+      <li>See all Level 2 and admitted APC patients</li>
+      <li>E-prescribe for all medications</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="charting" data-keywords="voice recognition M*Modal Fluency macros templates HPI ROS physical exam MDM medical decision making procedure notes discharge notes commands">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🎤</div>
+    <div style="flex:1">
+      <div class="card-title">Voice Recognition – M*Modal Fluency Macros</div>
+      <div class="card-tags"><span class="tag">Charting</span><span class="tag">EMR</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-warning">Macros are templates only — always edit for accuracy. Copy/paste without editing increases fraud risk.</div>
+    <table>
+      <tr><th>Macro Type</th><th>Description</th><th>Voice Command Style</th></tr>
+      <tr><td>Templates</td><td>Complete notes based on chief complaint</td><td>Template ____</td></tr>
+      <tr><td>HPI</td><td>Short HPI statements</td><td>History ____</td></tr>
+      <tr><td>ROS</td><td>Review of systems by complaint</td><td>ROS (child) with ____</td></tr>
+      <tr><td>Physical Exams</td><td>Full or detailed body-specific exam templates</td><td>_____ exam</td></tr>
+      <tr><td>MDM</td><td>Medical decision making by complaint/condition</td><td>Insert ____</td></tr>
+      <tr><td>Differential Dx</td><td>Differential diagnosis lists</td><td>Negative Differential ____</td></tr>
+      <tr><td>Procedure Notes</td><td>Procedure documentation</td><td>Procedure ____</td></tr>
+      <tr><td>Discharge Notes</td><td>Return precautions by diagnosis</td><td>Discharge ____</td></tr>
+    </table>
+    <h4>Creating Custom Macros</h4>
+    <ul>
+      <li>Insert desired macro template into chart</li>
+      <li>Edit to your preference</li>
+      <li>Select text → say "Save this text" → name it</li>
+      <li>Use brackets [ ] for FF-button navigation; asterisks *** to mark sections to remove</li>
+      <li>Say "Remove all fields" to clear all brackets</li>
+    </ul>
+    <div class="alert alert-info">If macros are missing from your profile, notify Dr. Corbit immediately.</div>
+  </div>
+</div>
+
+<div class="card" data-cat="charting" data-keywords="MIPS documentation teaching physician TP attestation resident co-sign E/M critical care procedure radiology interpretation time based codes">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📝</div>
+    <div style="flex:1">
+      <div class="card-title">Teaching Physician Documentation & MIPS</div>
+      <div class="card-tags"><span class="tag">Charting</span><span class="tag">Compliance</span><span class="tag">Residency</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>Recommended Attestation</h4>
+    <div class="alert alert-success">"I personally saw and examined the patient. I have reviewed and agree with the resident's findings including all diagnostic interpretations, and treatment plans as written. I was present for the key portions of any procedures performed and the inclusive time noted in any critical care statement."</div>
+    <h4>Key Rules</h4>
+    <ul>
+      <li>TP must provide face-to-face service and personally document it</li>
+      <li>TP must indicate review/agreement with resident's documentation</li>
+      <li>Resident documenting "attending was present" is NOT sufficient for billing</li>
+      <li>For time-based codes (critical care): TP must be physically present for the entire billed time period</li>
+      <li>For procedures: TP must be present for all key portions</li>
+      <li>For radiology interpretations: "read and agree" or "reviewed and agree" is acceptable</li>
+    </ul>
+    <div class="alert alert-warning">If TP fails to provide necessary attestation, the chart is not billable — even if resident's chart is complete.</div>
+  </div>
+</div>
+
+<!-- ===================== PATIENT EXPERIENCE ===================== -->
+<div class="section-header" data-cat="patient-exp">Patient Experience</div>
+
+<div class="card" data-cat="patient-exp" data-keywords="patient experience AIDET survey courtesy listen inform comfort commit to sit manage up scores satisfaction">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">⭐</div>
+    <div style="flex:1">
+      <div class="card-title">Patient Experience: AIDET & Key Behaviors</div>
+      <div class="card-tags"><span class="tag">Patient Experience</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">Patient Experience = Perception minus Expectation. Evaluated on how you look, what you do, and how you say it — not clinical credentials.</div>
+    <h4>Expected Interaction with Every Patient</h4>
+    <ul>
+      <li>1. Introduce yourself</li>
+      <li>2. Sit down</li>
+      <li>3. Acknowledge patient/family</li>
+      <li>4. Update patient, especially about delays</li>
+      <li>5. Discuss findings</li>
+      <li>6. Close encounter with plan of care</li>
+    </ul>
+    <h4>Communication Behaviors That Improve Scores (factor of influence)</h4>
+    <ul>
+      <li><strong>Acknowledge wait and apologize</strong> — 16× improvement</li>
+      <li><strong>Overestimate wait time</strong> — 7× improvement</li>
+      <li><strong>At least 1 non-medical gesture</strong> — 4× improvement</li>
+      <li><strong>Begin with "How can I help you?"</strong> — 2.5× improvement</li>
+      <li><strong>Smile, eye contact, handshake</strong> — 1.5× improvement</li>
+    </ul>
+    <h4>Metrics Tracked</h4>
+    <ul>
+      <li>Door to greet</li>
+      <li>Greet to order</li>
+      <li>Left AMA (LA) LOS</li>
+      <li>Discharge LOS</li>
+      <li>Last result to dispo</li>
+    </ul>
+    <h4>Survey Topics</h4>
+    <ul>
+      <li>Courtesy of the doctor</li>
+      <li>Degree to which doctor listened</li>
+      <li>Doctor's concern to keep you informed</li>
+      <li>Doctor's concern for your comfort</li>
+    </ul>
+    <h4>Other Key Practices</h4>
+    <ul>
+      <li>Manage up staff and hospitalist</li>
+      <li>Monthly reports reviewed</li>
+      <li>Follow-up: refer to call list, Fetter Clinic</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== ADMIN & MEDICAL STAFF ===================== -->
+<div class="section-header" data-cat="admin">Administrative & Medical Staff</div>
+
+<div class="card" data-cat="admin" data-keywords="zenith teamhealth portal email hub notifications login access phone ShiftAdmin schedule payroll resources">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🌐</div>
+    <div style="flex:1">
+      <div class="card-title">TeamHealth ZENITH Portal</div>
+      <div class="card-tags"><span class="tag contact">Essential</span><span class="tag">TeamHealth</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">Check your TeamHealth email DAILY. ZENITH is the main hub for all TeamHealth notifications, communications, and resources.</div>
+    <p><strong>Access ZENITH:</strong> <a href="https://zenith.teamhealth.com" target="_blank">zenith.teamhealth.com</a></p>
+    <h4>What You'll Find in ZENITH</h4>
+    <ul>
+      <li>TeamHealth email (check daily)</li>
+      <li>ShiftAdmin schedule management</li>
+      <li>Payroll and compensation resources</li>
+      <li>Company-wide notifications and announcements</li>
+      <li>All TeamHealth resources and policies</li>
+    </ul>
+    <h4>Adding TeamHealth Email to Your Phone</h4>
+    <p>Step-by-step directions for adding your TeamHealth email to your phone are available within ZENITH. Setting this up is strongly recommended so you don't miss important communications.</p>
+  </div>
+</div>
+
+<div class="card" data-cat="admin" data-keywords="schedule scheduling ShiftAdmin shift request night weekend holiday Christmas Thanksgiving New Years summer block rotation fair">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📅</div>
+    <div style="flex:1">
+      <div class="card-title">Schedule & ShiftAdmin</div>
+      <div class="card-tags"><span class="tag">Admin</span><span class="tag">Scheduling</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">Schedule requests must be entered in ShiftAdmin at least <strong>two months in advance</strong>. Please do not text schedule requests.</div>
+    <p><strong>ShiftAdmin</strong> is accessed through <a href="https://zenith.teamhealth.com" target="_blank">ZENITH</a>.</p>
+    <p>Questions about the schedule can be directed to <strong>Dr. Scott Hayes</strong> or <strong>Dr. Neal Shelley</strong> via email.</p>
+    <h4>Nights & Weekends</h4>
+    <p>Everyone should expect to be scheduled their fair share of nights and weekends — this is shared equitably across the group.</p>
+    <h4>Winter Holidays</h4>
+    <p>Thanksgiving, Christmas, and New Year's are rotated yearly. If you did not work last Christmas, you will likely work this Christmas. We do <strong>5-day block scheduling</strong> around the major winter holidays to allow time to travel.</p>
+    <h4>Summer Holidays</h4>
+    <p>We do not have a formal rotation rule for summer holidays at this time, but requests may be limited depending on coverage needs.</p>
+  </div>
+</div>
+
+<div class="card" data-cat="admin" data-keywords="consultation urgent emergent non-urgent physician to physician communication 30 minutes 4 hours 24 hours intermediary nurse">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📜</div>
+    <div style="flex:1">
+      <div class="card-title">Consultation Requirements (Medical Staff Rules)</div>
+      <div class="card-tags"><span class="tag">Admin</span><span class="tag">Medical Staff</span><span class="tag protocol">Required</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">Physician-to-physician communication required for all emergent and urgent consults. Hospital employees (nurses) cannot be intermediaries.</div>
+    <table>
+      <tr><th>Consult Type</th><th>Timeframe</th><th>Communication</th></tr>
+      <tr><td><strong>Emergent</strong></td><td>ASAP; within 30–60 min</td><td>Physician to Physician required</td></tr>
+      <tr><td><strong>Urgent</strong></td><td>Within 4 hours</td><td>Physician to Physician required</td></tr>
+      <tr><td><strong>Non-Urgent</strong></td><td>Within 24 hours</td><td>Standard communication</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card" data-cat="admin" data-keywords="students medical student PA NP student rotation medical staff services cleared authorization must be cleared cannot rotate">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🎓</div>
+    <div style="flex:1">
+      <div class="card-title">Student Rotation Policy</div>
+      <div class="card-tags"><span class="tag urgent">Important</span><span class="tag">Admin</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">ALL students (PA/NP students, medical students) MUST be cleared through Medical Staff Services before rotating. Any uncleared student will be sent home.</div>
+    <p>Contact Medical Staff Services before any student begins their rotation at any Trident Health facility.</p>
+  </div>
+</div>
+
+<div class="card" data-cat="admin" data-keywords="metrics door greet order LOS discharge ALTO leave early sign out hours protect burn clinic transfer center all transfers">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">📊</div>
+    <div style="flex:1">
+      <div class="card-title">Operational Rules & Miscellaneous Policies</div>
+      <div class="card-tags"><span class="tag">Admin</span><span class="tag">Operations</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>If leaving early, sign out early to protect hours</li>
+      <li>Burn clinic at TMC: Monday and Wednesday mornings (Augusta team)</li>
+      <li>All burns → admit to Augusta; if in doubt, call Augusta Burn Center</li>
+      <li>All transfers go through the Transfer Center (One-Step)</li>
+      <li>Propofol requires 2 providers present</li>
+      <li>ALTO (Alternative to Opioids) — use where applicable</li>
+    </ul>
+    <h4>Sedation Options</h4>
+    <ul>
+      <li>Propofol — requires another clinician present</li>
+      <li>Etomidate</li>
+      <li>Versed (midazolam)</li>
+      <li>Ketamine</li>
+    </ul>
+    <h4>Consent/Paperwork</h4>
+    <ul>
+      <li>Paper, PDOC charting, discharge instructions</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== RESIDENCY ===================== -->
+<div class="section-header" data-cat="residency">Residency Program</div>
+
+<div class="card" data-cat="residency" data-keywords="residency program overview 33 residents 11 per class 3 years emergency medicine HCA Mercer Trident founded 2021 ACGME curriculum blocks">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🎓</div>
+    <div style="flex:1">
+      <div class="card-title">EM Residency Program Overview</div>
+      <div class="card-tags"><span class="tag">Residency</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p><strong>Official Name:</strong> HCA Healthcare/Mercer University School of Medicine/Trident Medical Center Emergency Medicine Residency</p>
+    <p><strong>Founded:</strong> 2021 | <strong>ACGME Accredited</strong></p>
+    <p><strong>Size:</strong> 11 residents per class, 33 total (3-year program)</p>
+    <p><strong>Curriculum:</strong> 13 four-week blocks per year across 3 years</p>
+    <h4>Clinical Sites</h4>
+    <ul>
+      <li>Trident Medical Center (primary — high-acuity)</li>
+      <li>Summerville Medical Center (suburban, higher volume/lower acuity, Peds ED, OB/GYN)</li>
+      <li>Centre Pointe ED (urban, lower-resource freestanding)</li>
+      <li>Moncks Corner Medical Center (rural freestanding)</li>
+    </ul>
+    <h4>Training Highlights</h4>
+    <ul>
+      <li>Mainly 1:1 faculty-to-resident scheduling</li>
+      <li>Extensive pediatric, ultrasound, and critical care exposure</li>
+      <li>Simulation lab (HCA-funded)</li>
+      <li>Research director + data analysts available</li>
+      <li>One scholarly project + one QI project per resident</li>
+    </ul>
+    <p><strong>📍 Program Office:</strong> 9225 Medical Plaza Drive, Suite E2B, North Charleston, SC 29406</p>
+  </div>
+</div>
+
+
+<div class="card" data-cat="residency" data-keywords="hospital awards accreditations Joint Commission certifications Top Performer stroke heart failure sepsis cardiac AHA Get With Guidelines trauma level II">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏆</div>
+    <div style="flex:1">
+      <div class="card-title">Hospital Awards & Accreditations</div>
+      <div class="card-tags"><span class="tag">System Info</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <ul>
+      <li>The Joint Commission: Heart Failure, Primary Stroke Center (Advanced), Joint Replacement (Hip/Knee), Sepsis Standards</li>
+      <li>National Top Performer: Heart Attack, Heart Failure, Pneumonia</li>
+      <li>Blue Distinction: Hip and Knee Replacement</li>
+      <li>Breast Imaging Center of Excellence</li>
+      <li>IAC: Echocardiography & Nuclear Cardiology Accreditation</li>
+      <li>AHA Get With the Guidelines: Silver Plus (Heart Failure), Platinum (AMI), Gold Plus (Stroke), Bronze Mission Lifeline (STEMI)</li>
+      <li>Becker's Top 100 Heart Programs</li>
+      <li>Society of Thoracic Surgeons: Highest 3-Star Rating</li>
+      <li>Society of Cardiovascular Care: Accredited Chest Pain Center with PCI (TMC) & Chest Pain Center (SMC)</li>
+      <li>Level III Trauma Program – SC DHEC</li>
+      <li>Sleep Center National Accreditation</li>
+      <li>Trident Cancer Center ACR Accreditation</li>
+    </ul>
+  </div>
+</div>
+
+
+
+<div class="card" data-cat="residency" data-keywords="chief on call resident chief phone number Curran Ditmeyer Sarah Braga Elizabeth Sears 843-640-0974 contact schedule">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏅</div>
+    <div style="flex:1">
+      <div class="card-title">Chief Residents — On Call Contacts</div>
+      <div class="card-tags"><span class="tag contact">Contacts</span><span class="tag">Residency</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-warning">Contact chiefs via personal phones — the Chief Phone (843) 640-0974 is unreliable.</div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Curran Ditmeyer</div>
+        <div class="contact-role">Chief Resident</div>
+        <div class="contact-phone">(906) 221-3356</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Sarah Braga-Guimaraes</div>
+        <div class="contact-role">Chief Resident</div>
+        <div class="contact-phone">(732) 325-8710</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Elizabeth Sears</div>
+        <div class="contact-role">Chief Resident</div>
+        <div class="contact-phone">(919) 482-0755</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Chief Phone (Backup)</div>
+        <div class="contact-role">Use sparingly — unreliable</div>
+        <div class="contact-phone">(843) 640-0974</div>
+      </div>
+    </div>
+    <p style="margin-top:10px; font-size:13px; color:#5a6480;">Full Chief On-Call calendar: <a href="https://www.notion.so/23fa13d0bca280e98afcf45d13881001" target="_blank">Notion Chief On Call page</a></p>
+  </div>
+</div>
+
+<!-- ===================== ADMIN: FAQ & QUICKLINKS ===================== -->
+<div class="section-header" data-cat="admin">FAQ & Administrative Resources</div>
+
+<div class="card" data-cat="admin" data-keywords="door code wifi password cafeteria hours breakfast lunch dinner sim center bathroom VIP network 3292 3-5">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🔑</div>
+    <div style="flex:1">
+      <div class="card-title">Door Codes, Wi-Fi & Cafeteria Hours</div>
+      <div class="card-tags"><span class="tag">FAQ</span><span class="tag">Admin</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>Door Codes</h4>
+    <ul>
+      <li><strong>Sim Center:</strong> <code style="background:#f0f0f0;padding:1px 6px;border-radius:3px;font-size:13px;">3292*</code></li>
+      <li><strong>Staff Bathroom / Nursing Breakroom:</strong> <code style="background:#f0f0f0;padding:1px 6px;border-radius:3px;font-size:13px;">3-5</code></li>
+    </ul>
+    <h4>Hospital Wi-Fi (Provider Network)</h4>
+    <ul>
+      <li><strong>Network:</strong> VIP</li>
+      <li><strong>Password:</strong> SC@W1r3Les$</li>
+    </ul>
+    <h4>Cafeteria Hours — Trident Medical Center</h4>
+    <table>
+      <tr><th>Meal</th><th>Hours</th></tr>
+      <tr><td>Breakfast</td><td>7:00 AM – 9:00 AM</td></tr>
+      <tr><td>Lunch</td><td>11:00 AM – 2:00 PM</td></tr>
+      <tr><td>Dinner</td><td>5:00 PM – 7:00 PM (Weekdays only)</td></tr>
+      <tr><td>Café</td><td>7:00 AM – 7:00 PM weekdays / 8:00 AM – 1:00 PM weekends*</td></tr>
+    </table>
+    <p style="font-size:12px;color:#b45309;margin-top:4px;">*Café hours subject to change due to staffing</p>
+    <h4>Cafeteria Hours — Summerville Medical Center</h4>
+    <table>
+      <tr><th>Meal</th><th>Weekday</th><th>Weekend</th></tr>
+      <tr><td>Breakfast</td><td>6:45 AM – 9:30 AM</td><td>8:15 AM – 9:30 AM</td></tr>
+      <tr><td>Lunch</td><td>11:00 AM – 2:00 PM</td><td>11:30 AM – 2:00 PM</td></tr>
+      <tr><td>Dinner</td><td>4:30 PM – 6:00 PM</td><td>4:30 PM – 6:00 PM</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===================== PHYSICIAN GROUPS ===================== -->
+<div class="section-header" data-cat="physicians">Physician Groups</div>
+
+<div class="card" data-cat="physicians" data-keywords="cardiology cardiologist Lowcountry Cards MUSC Pringle Saunders Looser Schneider Coker Hodskins Funke Kennedy Landes Mataosky McCarty Sandhu Krainin Graham Ahmad Tina Ellis Trinka Douglas">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">❤️</div>
+    <div style="flex:1">
+      <div class="card-title">Cardiology Groups</div>
+      <div class="card-tags"><span class="tag">Physician Groups</span><span class="tag">Cardiology</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Lowcountry Cards</div>
+        <div class="contact-role">Pringle, Saunders, Looser, Schneider</div>
+        <div class="contact-phone">APP: Tina Ellis</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">MUSC Cardiology</div>
+        <div class="contact-role">Coker, Hodskins, Funke, Kennedy, Landes, Mataosky, McCarty, Sandhu, Krainin, Graham, Ahmad</div>
+        <div class="contact-phone">APP: Trinka Douglas</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="physicians" data-keywords="general surgery trauma CT surgery Benner Shah Cerilli Arnold Jewett Jones Amodeo Clark Litton Lafond Roife Warren Carter Perez Burnham Rawlins Soutter colorectal Knoche peds pediatric surgical Annie Brayden Crystal Campbell David Blease">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🔪</div>
+    <div style="flex:1">
+      <div class="card-title">Surgery Groups (Trauma, General, CT Surgery)</div>
+      <div class="card-tags"><span class="tag">Physician Groups</span><span class="tag">Surgery</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>CT Surgery</h4>
+    <div class="contact-grid">
+      <div class="contact-card"><div class="contact-name">Benner Group</div><div class="contact-role">Works with residents</div><div class="contact-phone">APPs: Crystal Campbell, David Blease</div></div>
+      <div class="contact-card"><div class="contact-name">Shah Group</div><div class="contact-role">Works with residents</div></div>
+    </div>
+    <h4>General Surgery</h4>
+    <table>
+      <tr><th>Group</th><th>Physicians</th><th>Residents?</th></tr>
+      <tr><td><strong>TMC Trauma</strong></td><td>Cerilli, Arnold, Jewett, Jones, Amodeo, Smear, Clark<br><small style="color:#5a6480;">APPs: Annie, Brayden, Nick Hathaway, Nick Mello, Steve, Amy</small></td><td>✅ Yes</td></tr>
+      <tr><td><strong>TMC Gen Surg</strong></td><td>Litton, Lafond, Roife</td><td>✅ Yes</td></tr>
+      <tr><td><strong>SMC Gen Surg</strong></td><td>Warren, Carter, Perez</td><td>✅ Yes</td></tr>
+      <tr><td><strong>SMC Gen Surg</strong></td><td>Burnham, Rawlins</td><td>❌ No residents</td></tr>
+    </table>
+    <h4>SMC Subspecialty Surgery</h4>
+    <ul>
+      <li><strong>Soutter</strong> — SMC Peds General Surgery</li>
+      <li><strong>Knoche</strong> — SMC Colorectal Surgery</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="physicians ob" data-keywords="OBGYN OB gynecology OBHG Fetter Summerville Women Lowcountry Women Health Partners Maternal Fetal Medicine Accetta Allen Foley Cohen Givens Cook Parry Sommers Dacus Stofko Heinemann Hunter Schwartzberg Reeves Risinger Tarleton Wildman Rowin Kolb Meeks Navarro Fouquette Hardin Dewitt Lannaman Coggins">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">👶</div>
+    <div style="flex:1">
+      <div class="card-title">OB/GYN Groups</div>
+      <div class="card-tags"><span class="tag">Physician Groups</span><span class="tag">OB/GYN</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">📋 <strong>Outpatient OB/GYN Referrals:</strong> Check the daily call list for the <strong>OB/GYN Backup</strong> — this is the physician to refer patients to for outpatient follow-up.</div>
+
+    <h4>Lowcountry Women's Specialists</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Lowcountry Women's Specialists</div>
+        <div class="contact-role">Accetta, Cohen, Givens, Heinemann, Hunter, Reeves (Bo), Schwartzberg, Smith</div>
+        <div class="contact-phone">📞 (843) 797-3664</div>
+        <div class="contact-role"><strong>North Charleston:</strong> 9291 Medical Plaza Dr, North Charleston, SC 29406</div>
+        <div class="contact-role"><strong>Summerville:</strong> 77 Springview Ln, Summerville, SC 29485</div>
+        <div class="contact-role"><a href="https://lowcountrywomen.com" target="_blank">lowcountrywomen.com</a></div>
+      </div>
+    </div>
+
+    <h4>Summerville Women's Care (HCA)</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Summerville Women's Care</div>
+        <div class="contact-role">Dacus, Stofko, Sommers, Tarleton, Miles Reeves, Coggins, Hardin, Dewitt, Lannaman</div>
+        <div class="contact-phone">📞 (843) 569-2900 (North Charleston)</div>
+        <div class="contact-phone">📞 (843) 851-3800 (Summerville)</div>
+        <div class="contact-role"><strong>North Charleston:</strong> Medical Plaza Dr, North Charleston</div>
+        <div class="contact-role"><strong>Summerville:</strong> Midland Pkwy (on SMC campus)</div>
+        <div class="contact-role"><a href="https://www.hcahealthcaresummervillewomenscare.com" target="_blank">hcahealthcaresummervillewomenscare.com</a></div>
+      </div>
+    </div>
+
+    <h4>OBHG (Inpatient OB Hospitalists)</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">OBHG — Inpatient Only</div>
+        <div class="contact-role">Risinger (Team Lead), Allen, Foley, Fouquette, Kolb, Meeks, Navarro, Rowin, Wildman</div>
+        <div class="contact-role" style="font-size:12px;color:#5a6480;">In-hospital OB coverage; not a clinic group</div>
+      </div>
+    </div>
+
+    <h4>Women's Health Partners</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Women's Health Partners</div>
+        <div class="contact-role"><strong>Physicians:</strong> Cook, Parry, Sommers</div>
+        <div class="contact-role"><strong>APPs:</strong> Harlan (FNP), Rawlings Green (PA-C), Miller (PA-C), Payne (PA-C)</div>
+        <div class="contact-phone">📞 (843) 832-5096 (Oakbrook/Summerville)</div>
+        <div class="contact-phone">📞 (843) 970-1099 (Nexton)</div>
+        <div class="contact-role"><strong>Oakbrook:</strong> 75 Springview Ln, Summerville, SC 29485<br><small>(Across from Summerville Medical Center)</small></div>
+        <div class="contact-role"><strong>Nexton:</strong> 5500 Front St, Ste 430, Summerville, SC 29486</div>
+        <div class="contact-role">Mon–Thu 8am–5pm &nbsp;|&nbsp; Fri 8am–12pm</div>
+        <div class="contact-role"><a href="https://www.whpobgyn.com" target="_blank">whpobgyn.com</a></div>
+      </div>
+    </div>
+
+    <h4>Other OB/GYN Groups</h4>
+    <table>
+      <tr><th>Group</th><th>Notes</th></tr>
+      <tr><td><strong>Fetter (community)</strong></td><td>Community OB/GYN — see Fetter Free Clinic entry for locations</td></tr>
+    </table>
+
+  </div>
+</div>
+
+<div class="card" data-cat="physicians" data-keywords="nephrology kidney dialysis renal Charleston Nephrology Carolina Kidney Weathersby Pride Moseley Browder Kalinsky Hamilton Howlett Ayiku Samiratedu Emovon Dillon Ashley Simmons">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🫘</div>
+    <div style="flex:1">
+      <div class="card-title">Nephrology Groups</div>
+      <div class="card-tags"><span class="tag">Physician Groups</span><span class="tag">Nephrology</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Charleston Nephrology</div>
+        <div class="contact-role">Weathersby, Pride, Moseley, Browder, Kalinsky, Hamilton, Howlett, Ayiku, Samiratedu</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Carolina Kidney</div>
+        <div class="contact-role">Emovon, Dillon</div>
+        <div class="contact-role">APP: Ashley Simmons</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="physicians" data-keywords="urology urologist Palmetto Adult Children Urology Lowcountry Urology Clinics Ploch Brisson Nickles Vaughan Brandli Wood Britton bladder kidney stone prostate">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🔬</div>
+    <div style="flex:1">
+      <div class="card-title">Urology Groups</div>
+      <div class="card-tags"><span class="tag">Physician Groups</span><span class="tag">Urology</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Palmetto Adult &amp; Children's Urology</div>
+        <div class="contact-role">Ploch, Brisson, Nickles, Vaughan</div>
+        <div class="contact-phone">📞 (843) 797-6600</div>
+        <div class="contact-role">2890 Tricom St, North Charleston, SC 29406</div>
+        <div class="contact-role">Mon–Fri 8:30am–5:00pm</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Lowcountry Urology Clinics</div>
+        <div class="contact-role">Brandli, Wood, Britton</div>
+        <div class="contact-phone">📞 (843) 766-9747</div>
+        <div class="contact-role"><strong>West Ashley:</strong> 641 St. Andrews Blvd, Charleston 29407</div>
+        <div class="contact-role"><strong>Summerville:</strong> 295-A Midland Pkwy, Ste 100, Summerville 29485</div>
+        <div class="contact-role"><strong>Mt. Pleasant:</strong> 1300 Hospital Dr, Ste 210</div>
+        <div class="contact-role"><a href="https://lowcountryurology.com" target="_blank">lowcountryurology.com</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COST & RESOURCES ===================== -->
+<div class="section-header" data-cat="cost">Cost Awareness & Patient Resources</div>
+
+<div class="card" data-cat="cost" data-keywords="free clinic uninsured underinsured primary care sliding scale Barrier Island Dream Center Shifa CARES MUSC Harvest East Cooper Fetter low cost community health center Johns Island Summerville Mount Pleasant North Charleston">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏥</div>
+    <div style="flex:1">
+      <div class="card-title">Free & Low-Cost Clinics in the Lowcountry</div>
+      <div class="card-tags"><span class="tag">Cost Awareness</span><span class="tag">Patient Resources</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">Eligibility, services, and costs vary — patients should contact the clinic directly for enrollment details.</div>
+    <table>
+      <tr><th>Clinic</th><th>Services</th><th>Contact</th></tr>
+      <tr>
+        <td><strong>Barrier Island Free Medical Clinics</strong><br><small>3226 Maybank Hwy Bldg C, Johns Island</small></td>
+        <td>Primary Care, Cardiology, Derm, OBGYN, Labs &amp; Imaging, Neurology, Ophtho, Ortho, Psych, Urology</td>
+        <td>843-266-9800<br><a href="https://bifmc.org" target="_blank">bifmc.org</a></td>
+      </tr>
+      <tr>
+        <td><strong>Dream Center Clinic</strong><br><small>N. Charleston &amp; West Ashley</small></td>
+        <td>Primary Care, Dentistry (extractions), Specialty via referral</td>
+        <td>843-225-1132<br><a href="https://dreamcenterclinic.org" target="_blank">dreamcenterclinic.org</a></td>
+      </tr>
+      <tr>
+        <td><strong>Shifa Free Clinic</strong><br><small>668 Marina Dr, Charleston</small></td>
+        <td>Primary Care, OBGYN, Pediatrics, Optometry</td>
+        <td>843-364-7795<br><a href="https://shifaclinics.com" target="_blank">shifaclinics.com</a></td>
+      </tr>
+      <tr>
+        <td><strong>CARES Clinic MUSC</strong><br><small>1145 Six Mile Rd, Mt Pleasant</small></td>
+        <td>Specialty nights: Spanish, OBGYN, Cardiology, Derm, GI, Psych, Pediatrics</td>
+        <td>843-876-7097<br><a href="https://muschealth.org/medical-services/cares" target="_blank">muschealth.org/cares</a></td>
+      </tr>
+      <tr>
+        <td><strong>Harvest Free Medical Clinic</strong><br><small>1670 Drydock Ave, N. Charleston</small></td>
+        <td>Primary Care</td>
+        <td>843-747-3526<br><a href="https://www.hfmc.org" target="_blank">hfmc.org</a></td>
+      </tr>
+      <tr>
+        <td><strong>East Cooper Community Outreach</strong><br><small>1145 Six Mile Rd, Mt Pleasant</small></td>
+        <td>Primary Care, Dental, Food &amp; Financial Assistance</td>
+        <td>843-849-9220<br><a href="https://eccocharleston.org" target="_blank">eccocharleston.org</a></td>
+      </tr>
+      <tr>
+        <td><strong>Fetter Health Care</strong><br><small>Multiple Berkley, Charleston &amp; Dorchester locations</small></td>
+        <td>Primary Care, Psych, OBGYN, Pediatrics, Dentistry</td>
+        <td>1-866-285-7156<br><a href="https://fetterhealthcare.org" target="_blank">fetterhealthcare.org</a></td>
+      </tr>
+    </table>
+    <h4>Key Summerville / Dorchester Fetter Locations</h4>
+    <ul>
+      <li>Thaddeus J Bell MD Family Health Center — 130 Varnfield Dr, Summerville 29483 | (843) 821-3444</li>
+      <li>Fetter Health Wellness Center for Women — 700 N Pine St, Summerville 29483 | 843-722-4112</li>
+      <li>Dorchester Family Health Center — 679 Orangeburg Rd, Summerville 29483 | 843-261-2600</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" data-cat="cost" data-keywords="discharge medications cheap affordable generic prescribe $50 uninsured poor follow up cellulitis pneumonia UTI STI MSK asthma hypertension diabetes anxiety generic cephalexin amoxicillin doxycycline metformin hydroxyzine sertraline ketorolac cyclobenzaprine">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🛒</div>
+    <div style="flex:1">
+      <div class="card-title">$50-or-Less Discharge Medication Playbook</div>
+      <div class="card-tags"><span class="tag">Cost Awareness</span><span class="tag protocol">Protocol</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info"><strong>If the patient can't complete the discharge plan for ≤$50, it's not a real plan.</strong></div>
+    <h4>Universal Bundle (~$10–15) — Give to Almost Everyone</h4>
+    <ul>
+      <li>Acetaminophen ($4–6)</li>
+      <li>Ibuprofen or Naproxen ($4–6)</li>
+      <li>Famotidine or Omeprazole for GI protection ($4–6)</li>
+    </ul>
+    <h4>Infections</h4>
+    <ul>
+      <li><strong>Cellulitis:</strong> Cephalexin OR TMP-SMX + NSAIDs. Avoid Augmentin unless truly needed.</li>
+      <li><strong>CAP:</strong> Amoxicillin OR Doxycycline + Acetaminophen/Ibuprofen (≤$15)</li>
+      <li><strong>Uncomplicated UTI:</strong> Cephalexin ± Phenazopyridine (≤$25)</li>
+      <li><strong>STI (poor follow-up):</strong> Ceftriaxone IM + Azithromycin 1g PO in ED — treatment complete before discharge</li>
+    </ul>
+    <h4>Pain & MSK</h4>
+    <ul>
+      <li>Scheduled Ibuprofen + Acetaminophen ± Cyclobenzaprine (≤$20)</li>
+      <li>Ketorolac IM in ED for severe focal pain — no opioid Rx needed</li>
+    </ul>
+    <h4>Other Common Conditions</h4>
+    <ul>
+      <li><strong>Asthma/COPD:</strong> Prednisone burst + Albuterol nebulizer solution (≤$40–50)</li>
+      <li><strong>HTN starter:</strong> Amlodipine, Lisinopril, or HCTZ once daily (~$10)</li>
+      <li><strong>DM Type 2:</strong> Metformin (~$10) | Insulin-required: NPH (Walmart) + syringes (~$25–40)</li>
+      <li><strong>Anxiety/Insomnia:</strong> Hydroxyzine | Depression/Anxiety: Sertraline or Fluoxetine (≤$10)</li>
+      <li><strong>Nausea/GI:</strong> Promethazine or Ondansetron + Famotidine or Omeprazole (≤$15)</li>
+    </ul>
+    <h4>Do NOT Prescribe (Breaks the $50 Rule)</h4>
+    <ul>
+      <li>DOACs, brand-name inhalers, combo antihypertensives, long opioid courses, meds requiring lab monitoring, "just in case" antibiotics</li>
+    </ul>
+    <div class="alert alert-warning">
+      <strong>Documentation phrase:</strong> "Given the patient's limited resources and inability to ensure follow-up, the discharge plan was intentionally designed to prioritize affordability, simplicity, and completion of care."
+    </div>
+    <h4>Medication Coupons</h4>
+    <ul>
+      <li><strong>Eliquis:</strong> <a href="https://mprsetrial.mckesson.com/6822/landingPage.html?src=HCATX#" target="_blank">McKesson Eliquis Coupon</a></li>
+      <li>Additional coupons on the Cost Awareness page in the Trident EM Notion workspace</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== BEHAVIORAL HEALTH — CLINICAL PROTOCOLS ===================== -->
+
+<div class="card" data-cat="behavioral" data-keywords="chronic pain care plan IV fentanyl morphine dilaudid hydromorphone Benadryl diphenhydramine Cetirizine Hydroxyzine Gabapentin Amitriptyline opioid drug seeker frequent flier admit discharge 50 mcg 4mg">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">💉</div>
+    <div style="flex:1">
+      <div class="card-title">Chronic Pain Care Plan Protocol</div>
+      <div class="card-tags"><span class="tag protocol">Protocol</span><span class="tag urgent">Important</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">Follow the department chronic pain care plan for known chronic pain patients. Document clinical rationale for any deviation.</div>
+    <h4>IV Opioid Limits</h4>
+    <ul>
+      <li>IV Fentanyl — max <strong>50 mcg</strong></li>
+      <li>IV Morphine — max <strong>4 mg</strong></li>
+      <li><strong>Avoid Dilaudid (Hydromorphone)</strong> — not part of the chronic pain care plan</li>
+    </ul>
+    <h4>Antihistamines</h4>
+    <ul>
+      <li>✅ PO Cetirizine or Hydroxyzine — acceptable</li>
+      <li>❌ <strong>No IV or IM Benadryl (Diphenhydramine)</strong></li>
+    </ul>
+    <h4>Adjunct Medications</h4>
+    <ul>
+      <li>Acetaminophen (Tylenol)</li>
+      <li>Gabapentin</li>
+      <li>Amitriptyline</li>
+    </ul>
+    <h4>Admission Policy</h4>
+    <p><strong>No admission for uncomplicated chronic pain.</strong> If there is no acute surgical or medical emergency, discharge with appropriate outpatient resources.</p>
+  </div>
+</div>
+
+<div class="card" data-cat="behavioral" data-keywords="C-SSRS Columbia suicide risk assessment DRA detailed risk assessment ORL overall risk level low moderate high patient safety plan discharge psychiatric evaluation suicidal ideation self harm">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🧠</div>
+    <div style="flex:1">
+      <div class="card-title">Psychiatric Evaluation: C-SSRS & DRA Protocol</div>
+      <div class="card-tags"><span class="tag protocol">Protocol</span><span class="tag">Behavioral Health</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <h4>C-SSRS (Columbia Suicide Severity Rating Scale)</h4>
+    <ul>
+      <li>Complete at minimum the first 3 questions for all psychiatric presentations</li>
+      <li>Determines Overall Risk Level (ORL): <strong>Low / Moderate / High</strong></li>
+    </ul>
+    <h4>DRA (Detailed Risk Assessment)</h4>
+    <ul>
+      <li>Daily DRA documentation required for all patients with Low, Moderate, or High ORL</li>
+    </ul>
+    <h4>Discharge Requirements</h4>
+    <ul>
+      <li>Complete <strong>Patient Safety Plan</strong> before any psychiatric discharge</li>
+      <li>Document per BH hold requirements in Meditech</li>
+    </ul>
+    <div class="alert alert-warning">For inpatient psych placement: contact Live Oak. Tele-psych available at all sites. See the Behavioral Health Protocol card for full hold documentation.</div>
+  </div>
+</div>
+
+<!-- ===================== WELL-BEING ===================== -->
+<div class="section-header" data-cat="wellbeing">Well-Being & Mental Health</div>
+
+<div class="card" data-cat="wellbeing" data-keywords="housing charleston neighborhoods Park Circle Goose Creek Hanahan Summerville Nexton West Ashley James Island Mount Pleasant Daniel Island Downtown moving living relocation">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏠</div>
+    <div style="flex:1">
+      <div class="card-title">Housing in Charleston — Neighborhood Guide</div>
+      <div class="card-tags"><span class="tag">Well-Being</span><span class="tag">Lifestyle</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <p>Popular neighborhoods for residents moving to the Charleston metro:</p>
+    <div class="contact-grid">
+      <div class="contact-card"><div class="contact-name">Park Circle</div><div class="contact-role">N. Charleston — trendy, walkable, close to TMC</div></div>
+      <div class="contact-card"><div class="contact-name">Goose Creek</div><div class="contact-role">Affordable, suburban, good commute to both sites</div></div>
+      <div class="contact-card"><div class="contact-name">Hanahan</div><div class="contact-role">Quiet, family-friendly, close to TMC</div></div>
+      <div class="contact-card"><div class="contact-name">Summerville / Nexton</div><div class="contact-role">Newer developments, popular with families, near SMC</div></div>
+      <div class="contact-card"><div class="contact-name">West Ashley</div><div class="contact-role">Urban-adjacent, near downtown, reasonable rent</div></div>
+      <div class="contact-card"><div class="contact-name">James Island</div><div class="contact-role">Beach access, laid-back, slightly longer commute</div></div>
+      <div class="contact-card"><div class="contact-name">Mount Pleasant</div><div class="contact-role">Upscale, near beaches, longer commute to TMC</div></div>
+      <div class="contact-card"><div class="contact-name">Daniel Island</div><div class="contact-role">Master-planned community, convenient location</div></div>
+      <div class="contact-card"><div class="contact-name">Downtown Charleston</div><div class="contact-role">Historic, vibrant, higher cost of living</div></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="card" data-cat="wellbeing" data-keywords="mental health well-being wellness therapy counseling TeamHealth ZENITH resources for living peer to peer support crisis helpline 988 burnout stress anxiety depression resident physician RFL resourcesforliving">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">💚</div>
+    <div style="flex:1">
+      <div class="card-title">Mental Health & Well-Being Resources</div>
+      <div class="card-tags"><span class="tag">Well-Being</span><span class="tag contact">Support</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">Full TeamHealth well-being resources are available on <strong>ZENITH</strong> — the TeamHealth provider portal.</div>
+    <h4>Resources for Living (TeamHealth EAP)</h4>
+    <div class="alert alert-success">
+      <strong>5 free, confidential counseling sessions</strong> plus financial, legal, and daily life assistance.<br>
+      Available to all TeamHealth providers and their families.
+    </div>
+    <h4>How to Access</h4>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Online</div>
+        <div class="contact-role"><a href="https://go.rfl.com/teamhealth" target="_blank">go.rfl.com/teamhealth</a></div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Online (alternate)</div>
+        <div class="contact-role"><a href="https://resourcesforliving.com" target="_blank">resourcesforliving.com</a></div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Phone (24/7)</div>
+        <div class="contact-role"><strong>1-844-526-8300</strong></div>
+      </div>
+    </div>
+    <h4>Peer-to-Peer Support</h4>
+    <p>Peer-to-peer support is available through TeamHealth. Reach out to a colleague or your FMD to connect with the peer support program.</p>
+    <h4>Crisis & National Helplines</h4>
+    <ul>
+      <li><strong>988 Suicide &amp; Crisis Lifeline:</strong> Call or text <strong>988</strong> (24/7)</li>
+      <li><strong>Crisis Text Line:</strong> Text HOME to <strong>741741</strong></li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- end container -->
+
+<div style="text-align:center; padding: 20px; color: #999; font-size: 12px;">
+  Trident Health EM Provider Reference Database · TeamHealth · Updated 2026 · For internal provider use only
+</div>
+
+<script>
+let currentCat = 'all';
+
+// Pre-build a text index for every card so display:none never interferes
+var cardIndex = [];
+
+function buildIndex() {
+  cardIndex = [];
+  document.querySelectorAll('.card').forEach(function(card) {
+    var keywords = (card.getAttribute('data-keywords') || '').toLowerCase();
+    var titleEl = card.querySelector('.card-title');
+    var title = titleEl ? titleEl.innerText.toLowerCase() : '';
+    var bodyEl = card.querySelector('.card-body');
+    var body = bodyEl ? bodyEl.innerText.toLowerCase() : '';
+    cardIndex.push({ card: card, text: keywords + ' ' + title + ' ' + body });
+  });
+}
+
+function toggleCard(header) {
+  var body = header.nextElementSibling;
+  var toggle = header.querySelector('.card-toggle');
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('searchInput').value = '';
+  applyFilters('');
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  applyFilters('');
+}
+
+function applyFilters(query) {
+  var q = (query || '').toLowerCase().trim();
+  var words = q ? q.split(/\s+/).filter(function(w) { return w.length > 0; }) : [];
+
+  cardIndex.forEach(function(item) {
+    var card = item.card;
+    var cat = card.getAttribute('data-cat') || '';
+    var catMatch = currentCat === 'all' || cat.split(' ').indexOf(currentCat) >= 0;
+    var searchMatch = words.length === 0 || words.some(function(w) { return item.text.indexOf(w) >= 0; });
+    var visible = catMatch && searchMatch;
+    card.style.display = visible ? '' : 'none';
+    if (visible && words.length > 0) {
+      var body = card.querySelector('.card-body');
+      var toggle = card.querySelector('.card-toggle');
+      if (body && !body.classList.contains('open')) {
+        body.classList.add('open');
+        if (toggle) toggle.classList.add('open');
+      }
+    }
+  });
+
+  // Show/hide section headers
+  document.querySelectorAll('.section-header').forEach(function(h) {
+    var sibling = h.nextElementSibling;
+    var anyVisible = false;
+    while (sibling && !sibling.classList.contains('section-header')) {
+      if (sibling.classList.contains('card') && sibling.style.display !== 'none') {
+        anyVisible = true; break;
+      }
+      sibling = sibling.nextElementSibling;
+    }
+    h.style.display = anyVisible ? '' : 'none';
+  });
+
+  // No-results message
+  var allHidden = cardIndex.every(function(item) { return item.card.style.display === 'none'; });
+  var existing = document.getElementById('no-results-msg');
+  if (allHidden && words.length > 0) {
+    if (!existing) {
+      var msg = document.createElement('div');
+      msg.id = 'no-results-msg';
+      msg.style.cssText = 'text-align:center;padding:40px;color:#888;font-size:16px;';
+      msg.textContent = 'No results found for "' + q + '". Try a different keyword.';
+      document.getElementById('cardContainer').appendChild(msg);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  buildIndex();
+  var inp = document.getElementById('searchInput');
+  inp.addEventListener('input', function() {
+    applyFilters(this.value);
+  });
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') clearSearch();
+  });
+});
+</script>
+
+</body>
+</html>
