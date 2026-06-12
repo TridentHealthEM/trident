@@ -181,6 +181,7 @@
   <button class="filter-btn" onclick="filterCat('admin', this)">📜 Admin & Medical Staff</button>
   <button class="filter-btn" onclick="filterCat('residency', this)">🎓 Residency</button>
   <button class="filter-btn" onclick="filterCat('physicians', this)">🩺 Physician Groups</button>
+  <button class="filter-btn" onclick="filterCat('gi', this)">🫁 Gastroenterology</button>
   <button class="filter-btn" onclick="filterCat('cost', this)">💰 Cost & Resources</button>
   <button class="filter-btn" onclick="filterCat('wellbeing', this)">💚 Well-Being</button>
 </div>
@@ -1634,6 +1635,70 @@
 
 <!-- ===================== PHYSICIAN GROUPS ===================== -->
 <div class="section-header" data-cat="physicians">Physician Groups</div>
+
+<div class="card" data-cat="physicians gi" data-keywords="gastroenterology GI gastro Hallak Moscatello ERCP bleed hospitalist inpatient">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🏥</div>
+    <div style="flex:1">
+      <div class="card-title">GI — Inpatient Hospitalists</div>
+      <div class="card-tags"><span class="tag urgent">Inpatient Only</span><span class="tag">GI</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">⚠️ <strong>GI Bleed Imaging:</strong> CTA abdomen should <strong>NOT</strong> be first-line imaging for GI bleed unless the patient is unstable or you are highly concerned for an active bleed.</div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Dr. Hallak</div>
+        <div class="contact-role">GI Hospitalist — inpatient only, does <strong>not</strong> see outpatient</div>
+        <div class="contact-role" style="color:#e8212a;font-size:13px;">⚠️ Does <strong>not</strong> perform ERCP. If ERCP needed → contact General Surgery, or transfer if emergent.</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Dr. Moscatello</div>
+        <div class="contact-role">GI Hospitalist — inpatient only, does <strong>not</strong> see outpatient</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-cat="physicians gi" data-keywords="gastroenterology GI outpatient referral Elms Digestive Palmetto Charleston GI Van-Leer Domm Basile Gourdin Hadzijahic Irions Lawrence Marsteller Noble Royall Shores Smith Adelman Armstrong Florez Goodear Grant Snyder colonoscopy endoscopy">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🫁</div>
+    <div style="flex:1">
+      <div class="card-title">GI — Outpatient Follow-Up Groups</div>
+      <div class="card-tags"><span class="tag">Outpatient</span><span class="tag">GI</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-name">Elms Digestive Disease Specialists</div>
+        <div class="contact-role">Adelman, Armstrong, Florez, Goodear, Grant, Snyder</div>
+        <div class="contact-phone">📞 (843) 797-6800</div>
+        <div class="contact-role">2671 Elms Plantation Blvd, North Charleston, SC 29406</div>
+        <div class="contact-role"><a href="https://www.elmsdigestive.com" target="_blank">elmsdigestive.com</a></div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Palmetto Primary Care GI</div>
+        <div class="contact-role">Van Leer-Greenberg, Domm</div>
+        <div class="contact-role">APPs: Chad Thomas PA, Brooke Watson PA</div>
+        <div class="contact-phone">📞 (843) 764-0992</div>
+        <div class="contact-role">5500 Front St, Suite 260, Summerville, SC 29486</div>
+        <div class="contact-role"><a href="https://www.palmettoprimarycare.com/divisionofgastroenterology" target="_blank">palmettoprimarycare.com</a></div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Charleston GI</div>
+        <div class="contact-role">Basile, Gourdin, Hadzijahic, Irions, Lawrence, Marsteller, Noble, Royall, Shores, Smith</div>
+        <div class="contact-phone">📞 (843) 722-8000</div>
+        <div class="contact-role"><strong>Summerville:</strong> 328 Midland Pkwy, Summerville, SC 29485</div>
+        <div class="contact-role"><strong>West Ashley:</strong> 1962 Charlie Hall Blvd, Charleston, SC 29414</div>
+        <div class="contact-role"><strong>Carnes Crossroads:</strong> 2001 2nd Ave, Suite 101, Summerville, SC 29486</div>
+        <div class="contact-role"><a href="https://charlestongi.com" target="_blank">charlestongi.com</a></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="card" data-cat="physicians" data-keywords="cardiology cardiologist Lowcountry Cards MUSC Pringle Saunders Looser Schneider Coker Hodskins Funke Kennedy Landes Mataosky McCarty Sandhu Krainin Graham Ahmad Tina Ellis Trinka Douglas">
   <div class="card-header" onclick="toggleCard(this)">
