@@ -179,6 +179,7 @@
   <button class="filter-btn" onclick="filterCat('radiology', this)">🔬 Radiology</button>
   <button class="filter-btn" onclick="filterCat('patient-exp', this)">⭐ Patient Experience</button>
   <button class="filter-btn" onclick="filterCat('admin', this)">📜 Admin & Medical Staff</button>
+  <button class="filter-btn" onclick="filterCat('quickref', this)">🔑 Quick Reference</button>
   <button class="filter-btn" onclick="filterCat('residency', this)">🎓 Residency</button>
   <button class="filter-btn" onclick="filterCat('physicians', this)">🩺 Physician Groups</button>
   <button class="filter-btn" onclick="filterCat('gi', this)">🫁 Gastroenterology</button>
@@ -756,7 +757,78 @@
 </div>
 
 <!-- ===================== TRAUMA ===================== -->
-<div class="section-header" data-cat="trauma">Trauma Protocols</div>
+<div class="section-header" data-cat="trauma">Trauma Protocols</div><div class="card" data-cat="neuro" data-keywords="dizziness dizzy vertigo triage code stroke walk trigger constant headache blurred vision head trauma STAT triage decision tool">
+  <div class="card-header" onclick="toggleCard(this)">
+    <div class="card-icon">🌀</div>
+    <div style="flex:1">
+      <div class="card-title">Dizziness Decision Tool — Triage Assessment</div>
+      <div class="card-tags"><span class="tag protocol">Protocol</span><span class="tag urgent">Time Sensitive</span><span class="tag">Neurology</span></div>
+    </div>
+    <div class="card-toggle">▼</div>
+  </div>
+  <div class="card-body">
+
+    <div class="alert alert-danger">⚡ <strong>Activate Stroke Alerts within 5 minutes of arrival</strong> for any sudden onset dizziness within the last 24 hours with ANY of the following:</div>
+
+    <!-- Quick trigger box -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+      <div style="background:#fef2f2;border:2px solid #e8212a;border-radius:10px;padding:14px;">
+        <div style="font-weight:700;color:#e8212a;font-size:14px;margin-bottom:8px;">🚨 ACTIVATE CODE STROKE</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;">
+          <li>Dizziness + <strong>Headache</strong></li>
+          <li>Dizziness + <strong>Blurred vision</strong></li>
+          <li>Dizziness + <strong>Change in walking ability</strong></li>
+          <li>Dizziness + <strong>Recent head trauma</strong></li>
+          <li>Dizziness + <strong>Numbness or Weakness</strong></li>
+          <li>Dizziness + <strong>High BP</strong></li>
+        </ul>
+      </div>
+      <div style="background:#f0fdf4;border:2px solid #1a7a4a;border-radius:10px;padding:14px;">
+        <div style="font-weight:700;color:#1a7a4a;font-size:14px;margin-bottom:8px;">📻 RADIO FOR STAT TRIAGE</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;">
+          <li>Dizziness worse when standing</li>
+          <li>Dizziness better when lying flat</li>
+          <li>Dizziness comes and goes</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step-by-step triage flow -->
+    <h4>Step-by-Step Triage Flow</h4>
+
+    <div style="border-left:4px solid #003087;padding-left:14px;margin-bottom:12px;">
+      <p style="margin:6px 0;"><strong>Step 1 — ASK: Are you able to walk normally?</strong></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+        <div style="background:#fef2f2;border-radius:6px;padding:8px;font-size:13px;"><strong style="color:#e8212a;">Unable to walk at baseline</strong> → <strong>Activate Code Stroke</strong></div>
+        <div style="background:#f4f6fa;border-radius:6px;padding:8px;font-size:13px;"><strong>Able to walk at baseline</strong> → Proceed to Step 2</div>
+      </div>
+    </div>
+
+    <div style="border-left:4px solid #003087;padding-left:14px;margin-bottom:12px;">
+      <p style="margin:6px 0;"><strong>Step 2 — ASK: Does the dizziness come and go, or is it constant?</strong></p>
+
+      <div style="margin-top:8px;padding:10px;background:#f4f6fa;border-radius:6px;margin-bottom:8px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">If it <u>comes and goes or improves</u> → ASK: Is it triggered by movement?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+          <div style="background:#f0fdf4;border-radius:6px;padding:8px;"><strong>Triggered by movement</strong> → Not likely neuro related</div>
+          <div style="background:#f4f6fa;border-radius:6px;padding:8px;"><strong>No trigger</strong> → ASK: Any other symptoms? (headache, high BP, numbness, weakness → <strong style="color:#e8212a;">Activate Code Stroke</strong>; chest pain or passing out → not likely neuro)</div>
+        </div>
+      </div>
+
+      <div style="padding:10px;background:#f4f6fa;border-radius:6px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">If <u>constant / nothing makes it better or worse</u> → ASK: Any recent head trauma, unusual medications, or toxins?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+          <div style="background:#f0fdf4;border-radius:6px;padding:8px;"><strong>Trauma or toxin present</strong> → Not likely neuro related</div>
+          <div style="background:#fef2f2;border-radius:6px;padding:8px;"><strong>No trauma or toxin</strong> → <strong style="color:#e8212a;">Activate Code Stroke</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:11px;color:#8a94aa;text-align:right;margin-top:8px;">Reviewed 6/2026</p>
+  </div>
+</div>
+
+
 
 <div class="card" data-cat="trauma" data-keywords="trauma level I criteria GCS BP respiratory rate penetrating flail chest fracture amputation skull burn falls Level 1 activation indicators">
   <div class="card-header" onclick="toggleCard(this)">
@@ -1594,7 +1666,7 @@
 <!-- ===================== ADMIN: FAQ & QUICKLINKS ===================== -->
 <div class="section-header" data-cat="admin">FAQ & Administrative Resources</div>
 
-<div class="card" data-cat="admin" data-keywords="door code wifi password cafeteria hours breakfast lunch dinner sim center bathroom VIP network 3292 3-5">
+<div class="card" data-cat="admin quickref" data-keywords="door code wifi password cafeteria hours breakfast lunch dinner sim center bathroom VIP network 3292 3-5">
   <div class="card-header" onclick="toggleCard(this)">
     <div class="card-icon">🔑</div>
     <div style="flex:1">
